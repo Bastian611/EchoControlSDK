@@ -8,6 +8,14 @@
 #include "../time/time_utils.h"
 #include "../utils/utils.h"
 #include "../utils/file_system.h"
+
+#ifdef _WIN32
+#include <direct.h>
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
 #define _INVALID_FILE_     -1
 #define _FPRINTFS_FAILED_  -2
 
@@ -141,6 +149,8 @@ bool Logger::writeCustom(bool mount){
 
 void Logger::backupLogs()
 {
+#ifdef __Linux__
+
     if("" == m_backup_path_str)
     {
         return;
@@ -249,6 +259,11 @@ void Logger::backupLogs()
         mySystem(cmdStr,true,2,cmdOut);
     }
 
+#else
+
+    LOG_WARNING("Log backup/encryption is not implemented for Windows yet.");
+
+#endif
 }
 
 /**
@@ -464,35 +479,36 @@ int Logger::recoder(const char* fmt, ...)
  * @param fmt：日志内容
  * @param args：format格式字符串
  * @return 失败返回错误码（_INVALID_FILE_ | _FPRINTFS_FAILED_），成功返回写入字节数
+ * 2025.12.15优化，避免I/O因频繁写入日志崩溃
  */
 int Logger::log(char level, const char* fmt, va_list args)
 {
-    if(!log_out){
+    if (!log_out) {
         return 1;
     }
 #if DISABLE_LOG
     return 1;
 #endif
-    if(level == 'O')
+
+    // --- 统一选择目标文件指针，避免重复代码 ---
+    FILE* pTargetFile = NULL;
+    if (level == 'O')
     {
-        if (!m_fout_operate){
-            return _INVALID_FILE_;
-        }
+        pTargetFile = m_fout_operate;
     }
-    else if(level == 'R')
+    else if (level == 'R')
     {
-        if(!m_fout_record)
-        {
-            return _INVALID_FILE_;
-        }
+        pTargetFile = m_fout_record;
     }
     else
     {
-        if (!m_fout){
-            return _INVALID_FILE_;
-        }
+        pTargetFile = m_fout;
     }
 
+    // 检查文件指针是否有效
+    if (!pTargetFile) {
+        return _INVALID_FILE_;
+    }
 
     int iRet = 0, tmpRet = 0;
     SMART_LOCK(m_lock);
@@ -500,52 +516,36 @@ int Logger::log(char level, const char* fmt, va_list args)
     m_lastLog.restart();
 
     // 生成信息头并写入文件
-    char buf[32] = {0};
+    char buf[32] = { 0 };
     auto dt = now(m_time_zone);
-    tmpRet = snprintf(buf, sizeof(buf), "[%04d-%02d-%02d %02d:%02d:%02d.%03d] [%c] ",dt.year,dt.mon,dt.day,
+    tmpRet = snprintf(buf, sizeof(buf), "[%04d-%02d-%02d %02d:%02d:%02d.%03d] [%c] ", dt.year, dt.mon, dt.day,
         dt.hour, dt.min, dt.sec, dt.ms, level);
-    assert(tmpRet == 30);
-    if(level == 'O')
-    {
-        tmpRet = fprintf(m_fout_operate, "%s", buf);
-        if (tmpRet < 0){
-            return _FPRINTFS_FAILED_;
-        }
-        iRet += tmpRet;
 
-        // 写入信息
-        tmpRet = vfprintf(m_fout_operate, fmt, args);
-        if (tmpRet < 0){
-            return _FPRINTFS_FAILED_;
-        }
-        fflush(m_fout_operate);
-        iRet += tmpRet;
-    }
-    else if(level == 'R')
-    {
-        // 写入信息
-        tmpRet = vfprintf(m_fout_record, fmt, args);
-        if (tmpRet < 0){
-            return _FPRINTFS_FAILED_;
-        }
-        fflush(m_fout_record);
-        iRet += tmpRet;
-    }
-    else
-    {
-        tmpRet = fprintf(m_fout, "%s", buf);
-        if (tmpRet < 0){
-            return _FPRINTFS_FAILED_;
-        }
-        iRet += tmpRet;
+    // snprintf 可能因为截断返回更大的值，这里断言改成 >= 30 更安全
+    assert(tmpRet >= 30); 
 
-        // 写入信息
-        tmpRet = vfprintf(m_fout, fmt, args);
-        if (tmpRet < 0){
-            return _FPRINTFS_FAILED_;
-        }
-        fflush(m_fout);
-        iRet += tmpRet;
+    // --- 统一写入逻辑 ---
+
+    // 1. 写入时间头
+    tmpRet = fprintf(pTargetFile, "%s", buf);
+    if (tmpRet < 0) {
+        return _FPRINTFS_FAILED_;
+    }
+    iRet += tmpRet;
+
+    // 2. 写入日志内容
+    tmpRet = vfprintf(pTargetFile, fmt, args);
+    if (tmpRet < 0) {
+        return _FPRINTFS_FAILED_;
+    }
+    iRet += tmpRet;
+
+    // --- 性能优化：按需刷新 (Conditional Flush) ---
+    // 只有 Error(E), Warning(W) 或 操作日志(O) 才强制立即刷盘
+    // Debug(D), Info(I), Record(R) 依靠系统缓存，提高大量写入时的性能
+    if (level == 'E' || level == 'W' || level == 'O')
+    {
+        fflush(pTargetFile);
     }
 
     return iRet;

@@ -59,7 +59,7 @@ set(LIB_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 add_library(EchoControlSDK STATIC
     ${ECHO_SDK_SOURCES}
     ${ECHO_SDK_HEADERS}
- "src/device/DeviceControl.h" "src/device/DeviceControl.cpp" "src/device/DeviceType.h" "src/config/ConfigType.h" "src/config/ConfigDefault.h" "src/config/ConfigValidator.h" "src/config/ConfigManager.h" "src/config/ConfigManager.cpp")
+)
 
 # 静态库输出到 lib/static
 set_target_properties(EchoControlSDK PROPERTIES
@@ -77,7 +77,7 @@ target_include_directories(EchoControlSDK
 add_library(EchoControlSDK_shared SHARED
     ${ECHO_SDK_SOURCES}
     ${ECHO_SDK_HEADERS}
- "src/device/DeviceControl.h" "src/device/DeviceControl.cpp" "src/device/DeviceType.h" "src/config/ConfigType.h" "src/config/ConfigDefault.h" "src/config/ConfigValidator.h" "src/config/ConfigManager.h" "src/config/ConfigManager.cpp")
+ )
 
 # 动态库输出到 lib/shared（DLL 和 import lib 都在此目录）
 set_target_properties(EchoControlSDK_shared PROPERTIES
