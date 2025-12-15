@@ -252,7 +252,6 @@ int AddrInfoWrapper::init()
  * @brief IsValidPort 判断端口是否可用
  * @param port：需要判断的端口号
  * @return True：可用 ， False：不可用
- * @author：TJH
  */
 bool IsValidPort(int port)
 {
@@ -262,7 +261,6 @@ bool IsValidPort(int port)
  * @brief IsValidSockAddr 判断地址是否可用
  * @param addr：需要判断的ip
  * @return True：可用 ， False：不可用
- * @author：TJH
  */
 bool IsValidSockAddr(str addr)
 {
@@ -287,7 +285,6 @@ bool IsValidSockAddr(str addr)
  * @param addr0 ：待判断的地址1
  * @param addr1 ：待判断的地址2
  * @return True：相同，False：不同
- * @author：Tjh
  */
 bool Equal(const sockaddr& addr0, const sockaddr& addr1)
 {
@@ -329,7 +326,6 @@ bool operator==(const sockaddr& addr0, const sockaddr& addr1)
  * @brief StrSockAddr ip地址输出成字符串
  * @param addr：待输出的ip地址
  * @return 输出字符串
- * @author：Tjh
  */
 str StrSockAddr(const sockaddr& addr)
 {

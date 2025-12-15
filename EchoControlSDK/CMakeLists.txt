@@ -2,6 +2,33 @@
 project(EchoControlSDK LANGUAGES CXX)
 
 # -------------------------------
+# 平台名
+# -------------------------------
+if (WIN32)
+    set(ECCS_PLATFORM windows)
+elseif (UNIX)
+    set(ECCS_PLATFORM linux)
+else()
+    set(ECCS_PLATFORM unknown)
+endif()
+
+# -------------------------------
+# 架构名
+# -------------------------------
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(ECCS_ARCH x64)
+else()
+    set(ECCS_ARCH x86)
+endif()
+
+# -------------------------------
+# 输出根目录
+# -------------------------------
+set(ECCS_OUTPUT_ROOT
+    ${CMAKE_SOURCE_DIR}/out/lib/${ECCS_PLATFORM}/${ECCS_ARCH}
+)
+
+# -------------------------------
 # C++ 标准
 # -------------------------------
 set(CMAKE_CXX_STANDARD 11)
@@ -32,7 +59,7 @@ set(LIB_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 add_library(EchoControlSDK STATIC
     ${ECHO_SDK_SOURCES}
     ${ECHO_SDK_HEADERS}
-)
+ "src/device/DeviceControl.h" "src/device/DeviceControl.cpp" "src/device/DeviceType.h" "src/config/ConfigType.h" "src/config/ConfigDefault.h" "src/config/ConfigValidator.h" "src/config/ConfigManager.h" "src/config/ConfigManager.cpp")
 
 # 静态库输出到 lib/static
 set_target_properties(EchoControlSDK PROPERTIES
@@ -50,7 +77,7 @@ target_include_directories(EchoControlSDK
 add_library(EchoControlSDK_shared SHARED
     ${ECHO_SDK_SOURCES}
     ${ECHO_SDK_HEADERS}
-)
+ "src/device/DeviceControl.h" "src/device/DeviceControl.cpp" "src/device/DeviceType.h" "src/config/ConfigType.h" "src/config/ConfigDefault.h" "src/config/ConfigValidator.h" "src/config/ConfigManager.h" "src/config/ConfigManager.cpp")
 
 # 动态库输出到 lib/shared（DLL 和 import lib 都在此目录）
 set_target_properties(EchoControlSDK_shared PROPERTIES

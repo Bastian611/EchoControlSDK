@@ -21,7 +21,6 @@ ECCS_BEGIN
  * @arg info：该异常的描述字符串
  * @arg idx ：越界时的位置计数值
  * @arg len ：数据存储数组的长度
- * @author  :TJH
  */
 class EOutOfBoundary : public std::exception
 {
@@ -46,7 +45,6 @@ private:
  * @brief The ETypeCast class一般在数据类型错误时被抛出
  * @name :ETypeCast异常类
  * @arg info：该异常的描述字符串
- * @author  :TJH
  */
 class ETypeCast : public std::exception
 {
@@ -70,7 +68,6 @@ private:
  * @brief The EInvalidParam class一般在输入参数错误时被抛出
  * @name :EInvalidParam异常类
  * @arg fmt：该异常的描述字符串
- * @author  :TJH
  */
 class EInvalidParam : public std::exception
 {
@@ -94,7 +91,6 @@ private:
  * @brief The EInvalidOperation class一般在执行了错误/未定义的操作时被抛出
  * @name :EInvalidOperation 异常类
  * @arg fmt：该异常的描述字符串
- * @author  :TJH
  */
 class EInvalidOperation : public std::exception
 {
@@ -119,7 +115,6 @@ private:
  * @name :ESystemError 异常类
  * @arg info：该异常的描述字符串
  * @arg error:系统返回的错误码
- * @author  :TJH
  */
 class ESystemError : public std::exception
 {
@@ -146,7 +141,6 @@ private:
  * @name :ESocketError 异常类
  * @arg info：该异常的描述字符串
  * @arg error:系统返回的错误码
- * @author  :TJH
  */
 class ESocketError : public std::exception
 {
@@ -172,7 +166,6 @@ private:
  * @brief The ETimeout class一般在操作超时时被抛出
  * @name :ETimeout 异常类
  * @arg info：该异常的描述字符串
- * @author  :TJH
  */
 class ETimeout : public std::exception
 {
@@ -196,7 +189,6 @@ private:
  * @brief The EIOException class一般在IO异常时被抛出
  * @name :EIOException 异常类
  * @arg fmt：该异常的描述字符串
- * @author  :TJH
  */
 class EIOException : public std::exception
 {
@@ -220,7 +212,6 @@ private:
  * @brief The EInterrupt class一般在程序被异常中断，标志位状态变化时被抛出
  * @name :EInterrupt 异常类
  * @arg fmt：该异常的描述字符串
- * @author  :TJH
  */
 class EInterrupt : public std::exception
 {
@@ -242,7 +233,6 @@ private:
  * @brief The EDjiMopChannel class在大疆MOP通道传输异常时被抛出
  * @name :EInterrupt 异常类
  * @arg fmt：该异常的描述字符串
- * @author  :TJH
  */
 class EDjiMopChannel : public std::exception
 {
@@ -264,7 +254,6 @@ private:
  * @brief The EDjiMopChannelDisconnect class在大疆MOP通道连接断开时被抛出
  * @name :EInterrupt 异常类
  * @arg fmt：该异常的描述字符串
- * @author  :TJH
  */
 class EDjiMopChannelDisconnect : public std::exception
 {

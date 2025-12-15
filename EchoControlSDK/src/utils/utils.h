@@ -54,7 +54,6 @@ struct MemInfo {
   * @param call_type: 调用的类型 1:正常调用,2:获得shell的输出,存于output中
   * @param output : 若call_type = 2 , 则用于保存shell的输出
   * @return : 如果调用正常,返回空字符串,若调用失败,返回失败描述
-  * @author : tjh
   */
  std::string mySystem(const char *command,bool print_output = true,int call_type = 1,char* output = NULL);
 
