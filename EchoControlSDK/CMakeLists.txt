@@ -59,7 +59,7 @@ set(LIB_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 add_library(EchoControlSDK STATIC
     ${ECHO_SDK_SOURCES}
     ${ECHO_SDK_HEADERS}
-)
+ )
 
 # 静态库输出到 lib/static
 set_target_properties(EchoControlSDK PROPERTIES
