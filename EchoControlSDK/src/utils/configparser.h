@@ -2,6 +2,7 @@
 #define CONFIGPARSER_H
 #include "../global.h"
 #include <map>
+#include <vector>
 #include <fstream>
 
 using namespace std;
@@ -21,6 +22,11 @@ public:
     string Get(const string section, const string key);
     bool Set(const string section, const string key, const string value);
     bool writeValueToFile();
+
+    // [20251215ÐÂÔö] »ñÈ¡ËùÓÐSectionÁÐ±í
+    std::vector<string> GetAllSections();
+    // [20251215ÐÂÔö] ÅÐ¶ÏSectionÊÇ·ñ´æÔÚ
+    bool IsSection(const string section);
 
 private:
     Value  _configValue;

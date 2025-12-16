@@ -99,4 +99,8 @@ target_include_directories(EchoControlSDK_shared
 if (WIN32)
     target_link_libraries(EchoControlSDK ws2_32)
     target_link_libraries(EchoControlSDK_shared ws2_32)
+elseif (UNIX)
+    # Linux下必须链接 pthread，否则 std::thread 会崩溃
+    target_link_libraries(EchoControlSDK pthread)
+    target_link_libraries(EchoControlSDK_shared pthread)
 endif()

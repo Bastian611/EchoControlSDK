@@ -116,4 +116,18 @@ bool ConfigParser::writeValueToFile()
     return true;
 }
 
+std::vector<string> ConfigParser::GetAllSections()
+{
+    std::vector<string> sections;
+    for (auto const& element : _configValue) {
+        sections.push_back(element.first);
+    }
+    return sections;
+}
+
+bool ConfigParser::IsSection(const string section)
+{
+    return _configValue.find(section) != _configValue.end();
+}
+
 }
