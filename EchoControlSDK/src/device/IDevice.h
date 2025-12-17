@@ -3,6 +3,7 @@
 #include "DeviceID.h"
 #include <map>
 #include <string>
+#include <memory>
 
 ECCS_BEGIN
 
@@ -20,8 +21,11 @@ public:
     virtual bool Start() = 0;
     virtual void Stop() = 0;
 
-    // 控制入口 (CmdID + Args)
+    // cmd 控制入口 (CmdID + Args)
     virtual void Execute(int cmdID, const std::string& args) = 0;
+
+    // Packet 协议控制入口
+    virtual void ExecutePacket(std::shared_ptr<rpc::RpcPacket> pkt) = 0;
 
     // 属性与状态
     virtual bool IsOnline() const = 0;
