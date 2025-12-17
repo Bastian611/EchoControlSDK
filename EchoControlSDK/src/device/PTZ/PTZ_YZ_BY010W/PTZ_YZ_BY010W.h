@@ -7,9 +7,11 @@ ECCS_BEGIN
 class PTZ_YZ_BY010W : public IPTZ_Device
 {
 public:
-    FACTORY_ID_CHILD_WITH_SPEC_NAME(str, "YZ-BY010W", Device, PTZ_YZ_BY010W, "YZ-BY010W")
+    using Self = PTZ_YZ_BY010W;
+    //FACTORY_ID_CHILD_WITH_SPEC_NAME(DeviceBase, Self, "YZ-BY010W")
+    FACTORY_CHILD_WITH_SPEC_NAME(DeviceBase, PTZ_YZ_BY010W, "YZ-BY010W")
 
-        PTZ_YZ_BY010W();
+    PTZ_YZ_BY010W();
     virtual ~PTZ_YZ_BY010W();
 
     virtual bool Init(int slotID, const std::map<str, str>& config) override;

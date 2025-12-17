@@ -12,7 +12,7 @@ Light_HL_525_4W::~Light_HL_525_4W() {
 
 bool Light_HL_525_4W::Init(int slotID, const std::map<str, str>& config) {
     // 1. 调用基类初始化
-    if (!Device::Init(slotID, config)) return false;
+    if (!DeviceBase::Init(slotID, config)) return false;
 
     // 2. 绑定 ID
     m_deviceID = DeviceID(did::DEVICE_LIGHT, did::LIGHT_HL_525_4W);

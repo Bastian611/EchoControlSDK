@@ -1,9 +1,9 @@
 #pragma once
-#include "../Device.hpp"
+#include "../DeviceBase.h"
 
 ECCS_BEGIN
 
-class ILight_Device : public Device
+class ILight_Device : public DeviceBase
 {
 public:
     // 覆盖基类的 Packet 处理函数
@@ -37,14 +37,6 @@ public:
             // ...
             return;
         }
-    }
-
-    // --- 兼容旧字符串指令 (可选) ---
-    virtual void OnRegisterCommands() override {
-        RegisterCmd(DeviceEventID::ExecuteString, [this](const str& args) {
-            // 解析字符串 args 并调用 SetSwitch 等
-            // 建议逐步废弃，这里仅作示例
-            });
     }
 
 protected:

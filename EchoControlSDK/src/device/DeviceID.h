@@ -89,6 +89,28 @@ public:
         m_id = MAKE_DEV_SID(type, model, index);
     }
 
+    // 获取 OID (Object ID, 去掉 Index，用于类型匹配)
+    // 返回值如：0x10020000
+    u32 GetOID() const {
+        return (m_id & (MASK_TYPE | MASK_MODEL));
+    }
+
+    // 静态辅助：从完整ID中提取OID
+    static u32 GetOID(u32 fullID) {
+        return (fullID & (MASK_TYPE | MASK_MODEL));
+    }
+
+    // 静态辅助：从完整ID中提取Index
+    static u8 GetIndex(u32 fullID) {
+        return static_cast<u8>(fullID & MASK_INDEX);
+    }
+
+    // 验证 Index 是否有效 (必须 >= 1)
+    bool IsIndexValid() const {
+        u8 idx = GetIndex();
+        return idx >= 1;
+    }
+
     // 赋值与比较
     DeviceID& operator=(const u32& val) { m_id = val; return *this; }
     bool operator==(const DeviceID& other) const { return m_id == other.m_id; }

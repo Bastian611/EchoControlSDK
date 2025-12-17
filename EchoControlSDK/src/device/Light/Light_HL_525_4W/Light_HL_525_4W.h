@@ -7,8 +7,10 @@ ECCS_BEGIN
 class Light_HL_525_4W : public ILight_Device
 {
 public:
+    using Self = Light_HL_525_4W;
     // ×¢²á¹¤³§ºê
-    FACTORY_ID_CHILD_WITH_SPEC_NAME(str, "HL-525", Device, Light_HL_525_4W, "HL-525")
+    //FACTORY_ID_CHILD_WITH_SPEC_NAME(DeviceBase, Self, "HL-525")
+    FACTORY_CHILD_WITH_SPEC_NAME(DeviceBase, Light_HL_525_4W, "HL-525")
 
     Light_HL_525_4W();
     virtual ~Light_HL_525_4W();

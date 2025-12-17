@@ -1,9 +1,9 @@
 #pragma once
-#include "../Device.hpp"
+#include "../DeviceBase.h"
 
 ECCS_BEGIN
 
-class IPTZ_Device : public Device
+class IPTZ_Device : public DeviceBase
 {
 public:
     virtual void OnPacketReceived(std::shared_ptr<rpc::RpcPacket> pkt) override {

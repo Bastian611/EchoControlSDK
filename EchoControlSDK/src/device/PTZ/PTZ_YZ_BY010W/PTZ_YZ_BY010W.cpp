@@ -11,7 +11,7 @@ PTZ_YZ_BY010W::~PTZ_YZ_BY010W() {
 }
 
 bool PTZ_YZ_BY010W::Init(int slotID, const std::map<str, str>& config) {
-    if (!Device::Init(slotID, config)) return false;
+    if (!DeviceBase::Init(slotID, config)) return false;
 
     m_deviceID = DeviceID(did::DEVICE_PTZ, did::PTZ_YZ_BY010W);
     m_ip = m_props.GetString("IP");
