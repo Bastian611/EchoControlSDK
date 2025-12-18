@@ -46,8 +46,8 @@ u32 GetDeviceOIDByModelName(const str& modelName) {
 FACTORY_BEGIN(u32, DeviceBase)
 
 // 使用具体类的 ID 常量进行注册
-FACTORY_APPEND(Light_HL_525_4W::ID, Light_HL_525_4W, DeviceBase)
-FACTORY_APPEND(PTZ_YZ_BY010W::ID, PTZ_YZ_BY010W, DeviceBase)
+FACTORY_APPEND(Light_HL_525_4W::ID,     Light_HL_525_4W,    DeviceBase)
+FACTORY_APPEND(PTZ_YZ_BY010W::ID,       PTZ_YZ_BY010W,      DeviceBase)
 
 FACTORY_END(u32, DeviceBase)
 

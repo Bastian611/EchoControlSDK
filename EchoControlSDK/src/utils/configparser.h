@@ -23,9 +23,9 @@ public:
     bool Set(const string section, const string key, const string value);
     bool writeValueToFile();
 
-    // [20251215ÐÂÔö] »ñÈ¡ËùÓÐSectionÁÐ±í
     std::vector<string> GetAllSections();
-    // [20251215ÐÂÔö] ÅÐ¶ÏSectionÊÇ·ñ´æÔÚ
+    // [新增] 获取指定 Section 下的所有键值对
+    std::map<string, string> GetSection(const string section);
     bool IsSection(const string section);
 
 private:

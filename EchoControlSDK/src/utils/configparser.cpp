@@ -125,6 +125,16 @@ std::vector<string> ConfigParser::GetAllSections()
     return sections;
 }
 
+std::map<string, string> ConfigParser::GetSection(const string section)
+{
+    auto it = _configValue.find(section);
+    if (it != _configValue.end()) {
+        return it->second; // 返回该节下的 map<key, value>
+    }
+    // 如果没找到，返回空 map
+    return std::map<string, string>();
+}
+
 bool ConfigParser::IsSection(const string section)
 {
     return _configValue.find(section) != _configValue.end();

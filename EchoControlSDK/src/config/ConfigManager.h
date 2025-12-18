@@ -1,19 +1,21 @@
 #pragma once
 #include "../global.h"
 #include "../utils/singleton.hpp"
-#include "../device/DeviceBase.h"
 #include <map>
 #include <vector>
 
 ECCS_BEGIN
 
-// 槽位规则结构 (对应 system_rules.sys)
+// 前置声明，避免循环引用
+class DeviceBase;
+
+// 槽位规则结构
 struct SlotRule {
     bool isMandatory;
-    std::vector<str> allowedTypes; // 允许的设备类型字符串
+    std::vector<str> allowedTypes;
 };
 
-// 负责加载系统配置并创建管理所有设备实例
+// 负责加载系统配置、校验规则、创建并管理设备实例
 class ConfigManager : public Singleton<ConfigManager>
 {
     friend class Singleton<ConfigManager>;
@@ -22,7 +24,7 @@ class ConfigManager : public Singleton<ConfigManager>
 public:
     ~ConfigManager();
 
-    // 核心入口：加载规则和参数，创建设备
+    // 核心入口：加载规则(.sys) 和 参数(.dev)，创建设备
     void LoadSystem(const str& rulePath, const str& paramPath);
 
     // 获取运行时设备指针
@@ -32,16 +34,11 @@ public:
     void Release();
 
 private:
-    // 内部辅助：解析 "Slot_1" -> 1
     int ParseSlotID(const str& sectionName);
 
 private:
-    // 存储槽位规则：SlotID -> Rule
     std::map<int, SlotRule> m_rules;
-
-    // 存储活跃设备：SlotID -> Device Pointer
-    // 这是系统唯一的设备持有者
-    std::map<int, DeviceBase*> m_devices;
+    std::map<int, DeviceBase*> m_devices; // 系统中所有设备的持有者
 };
 
 ECCS_END

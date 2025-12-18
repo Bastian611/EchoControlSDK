@@ -3,22 +3,29 @@
 #include "DeviceID.h"
 #include "DeviceState.h"
 #include "DeviceEvents.h"
-#include "../config/ConfigManager.h"
 #include "../thread/thread.h"
 #include "../utils/factory.hpp"
-#include "../debug/Logger.h"
 #include "../protocol/Packet_Def.h"
 #include <functional>
 #include <map>
+#include <sstream>
 
 ECCS_BEGIN
 
-// 使用 DeviceBase 避免与 Windows 系统库冲突
+// 内部使用的属性元数据结构
+struct PropMeta {
+    str key;
+    str defaultValue;
+    str description;
+    // bool readOnly; // 可选：如果需要只读控制可加上
+};
+
+// 
 class DeviceBase : public Thread
 {
 public:
-    DeviceBase() : Thread(), m_slotID(0), m_devState(STATE_OFFLINE) {}
-    virtual ~DeviceBase() { Stop(); }
+    DeviceBase();
+    virtual ~DeviceBase();
 
     // 工厂基类宏
     FACTORY_BASE()
@@ -27,161 +34,92 @@ public:
     // 公共接口
     // ------------------------------------------------
 
-    // 初始化
-    virtual bool Init(int slotID, const std::map<str, str>& config) {
-    m_slotID = slotID;
+    // 初始化：slotID 和 配置Map
+    virtual bool Init(int slotID, const std::map<str, str>& config);
 
-    // 注册通用属性
-    m_props.Register<int>("Transform", 1, "Transform"); // 0:Serial, 1:Net
-    m_props.Register<str>("IP", "127.0.0.1", "IP Address");
-    m_props.Register<int>("Port", 8000, "Port");
-    m_props.Register<str>("Type", "Unnamed", "Device Type");
-    m_props.Register<str>("Model", "Unnamed", "Device Model");
-    m_props.Register<int>("Index", 1, "Device Index");
-    m_props.Register<str>("ID", "0x00000000", "Device ID");
-    m_props.Register<bool>("Enable", false, "Enable");
+    // 生命周期控制
+    virtual bool Start();
+    virtual void Stop();
 
-    OnRegisterProperties(); // 子类钩子
-    m_props.Import(config);
+    // Packet 控制入口 (核心)
+    virtual void ExecutePacket(std::shared_ptr<rpc::RpcPacket> pkt);
 
-    // 从属性中解析出 ID 并赋值给成员变量
-    str idStr = m_props.GetString("ID");
-    u32 fullID = std::strtoul(idStr.c_str(), nullptr, 16);
+    // ------------------------------------------------
+    // 属性与状态查询
+    // ------------------------------------------------
 
-    m_deviceID = DeviceID(fullID);
+    // 获取属性字符串值
+    str GetProperty(const str& key) const;
 
-    // 二次校验（对象内部自检）
-    if (!m_deviceID.IsIndexValid()) {
-        LOG_ERROR("Device Init: Invalid Index 0");
-        return false;
+    // 泛型获取属性值 (内置类型转换)
+    template <typename T>
+    T GetPropValue(const str& key) const {
+        str valStr = GetProperty(key);
+        if (valStr.empty()) return T(); // 返回默认零值
+        std::stringstream ss(valStr);
+        T val;
+        ss >> val;
+        return val;
     }
 
-    OnRegisterCommands();
+    // 判断是否在线
+    virtual bool IsOnline() const;
 
-    return true;
-    }
+    // 获取设备身份 ID
+    DeviceID GetDeviceID() const;
 
-    // 启动
-    virtual bool Start() {
-        if (m_state == TS_RUNNING) return true;
-        Thread::start();
-        LOG_INFO("[Slot %d] Device Started.", m_slotID);
-        return true;
-    }
-
-    // 停止
-    virtual void Stop() {
-        Thread::quit();
-        Thread::join();
-        SetState(STATE_OFFLINE);
-        LOG_INFO("[Slot %d] Device Stopped.", m_slotID);
-    }
-
-    // Packet 控制入口
-    virtual void ExecutePacket(std::shared_ptr<rpc::RpcPacket> pkt) {
-        if (pkt) {
-            // 使用 new 创建裸指针，交给 Thread 接管
-            PacketEvent* e = new PacketEvent(pkt);
-            postEvent(e);
-        }
-    }
-
-    // 属性获取
-    virtual str GetProperty(const str& key) const {
-        return m_props.GetString(key);
-    }
-
-    // 在线状态
-    virtual bool IsOnline() const {
-        return m_devState == STATE_ONLINE || m_devState == STATE_WORKING;
-    }
-
-    DeviceID GetDeviceID() const { return m_deviceID; }
-
-    // 状态回调
+    // 状态回调注册
     using StatusCallback = std::function<void(std::shared_ptr<rpc::RpcPacket>)>;
-    void SetStatusCallback(StatusCallback cb) { m_statusCb = cb; }
+    void SetStatusCallback(StatusCallback cb);
 
 protected:
     // ------------------------------------------------
-    // 供子类实现的钩子
+    // 供子类使用的 API (Protected)
     // ------------------------------------------------
-    virtual void OnRegisterProperties() {}
 
-    virtual void OnRegisterCommands() {}
-
-    // [关键] 子类处理 Packet
-    virtual void OnPacketReceived(std::shared_ptr<rpc::RpcPacket> pkt) {}
-
-    // [兼容] 旧指令处理
-    using CmdHandler = std::function<void(const str&)>;
-    void RegisterCmd(int cmdID, CmdHandler handler) {
-        m_dispatcher[cmdID] = handler;
+    // [新增] 注册属性
+    template <typename T>
+    void RegisterProp(const str& key, T defaultVal, const str& desc = "") {
+        std::stringstream ss;
+        ss << defaultVal;
+        m_propMeta[key] = { key, ss.str(), desc };
+        m_propValues[key] = ss.str(); // 设置初始默认值
     }
 
+    // [状态] 切换状态并推送
+    void SetState(DevState newState, int errCode = 0);
+
     // ------------------------------------------------
-    // 内部功能函数
+    // 子类虚函数钩子 (Hooks)
     // ------------------------------------------------
-    void SetState(DevState newState, int errCode = 0) {
-        if (m_devState == newState) return;
-        m_devState = newState;
 
-        // 构造状态包
-        rpc::DeviceStatus status;
-        status.deviceID = m_deviceID.Value();
-        status.slotID = (u8)m_slotID;
-        status.state = (u8)newState;
-        status.errorCode = errCode;
-        status.temperature = 0.0f;
+    // 子类在此注册特有属性
+    virtual void OnRegisterProperties();
 
-        auto pkt = std::make_shared<rpc::OwDeviceStatus>(status);
-        if (m_statusCb) m_statusCb(pkt);
+    // 子类在此注册指令 (如果用旧模式)
+    virtual void OnRegisterCommands();
 
-        // LOG_DEBUG("[Slot %d] State: %s", m_slotID, DevStateToStr(newState));
-    }
+    // [关键] 子类处理收到的 Packet
+    virtual void OnPacketReceived(std::shared_ptr<rpc::RpcPacket> pkt);
 
-    // 线程循环
-    virtual void run() override {
-        while (m_state == TS_RUNNING) {
-            Event_Ptr e = m_eq.pop();
-            if (!e) continue;
+    // 自定义事件处理
+    virtual void OnCustomEvent(Event_Ptr& e);
 
-            if (e->eId() == EventTypes::Quit) break;
-
-            if (e->eId() == DeviceEventID::PacketArrival) {
-                auto pe = std::dynamic_pointer_cast<PacketEvent>(e);
-                if (pe && pe->GetPacket()) {
-                    OnPacketReceived(pe->GetPacket());
-                }
-            }
-            else if (e->eId() == DeviceEventID::ExecuteString) {
-                auto exe = std::dynamic_pointer_cast<ExecuteEvent>(e);
-                if (exe) Dispatch(exe->Dat.cmdID, exe->Dat.args);
-            }
-        }
-    }
+    // 线程循环实现
+    virtual void run() override;
 
 private:
-    void Dispatch(int cmdID, const str& args) {
-        auto it = m_dispatcher.find(cmdID);
-        if (it != m_dispatcher.end()) {
-            try { it->second(args); }
-            catch (std::exception& e) {
-                LOG_ERROR("[Slot %d] Cmd %d Exception: %s", m_slotID, cmdID, e.what());
-            }
-        }
-        else {
-            LOG_WARNING("[Slot %d] Cmd %d Not Registered", m_slotID, cmdID);
-        }
-    }
+    void Dispatch(int cmdID, const str& args);
 
 protected:
     int m_slotID;
     DeviceID m_deviceID;
-    ConfigManager m_props;
     DevState m_devState;
     StatusCallback m_statusCb;
-    std::map<int, CmdHandler> m_dispatcher;
+
+    // 内置属性存储
+    std::map<str, PropMeta> m_propMeta;   // 定义
+    std::map<str, str>      m_propValues; // 值
 };
 
 ECCS_END

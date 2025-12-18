@@ -13,26 +13,12 @@ namespace DeviceEventID {
     // 避免与系统事件 (EventTypes::Quit = 0) 冲突
     // EventTypes::User 通常是 512
 
-    // cmd形式的指令 (CmdID + StringArgs)
-    const int ExecuteString = EventTypes::User + 1;
-
     // 强类型协议包到达事件
     const int PacketArrival = EventTypes::User + 2;
 
     // 配置更新事件 (例如 IP 变更)
     const int ConfigUpdate = EventTypes::User + 3;
 }
-
-// -----------------------------------------------------------
-// 字符串指令事件 (兼容旧逻辑)
-// -----------------------------------------------------------
-struct ExecuteData {
-    int cmdID;
-    str args;
-};
-
-// 使用 EventTemplateEx 模板
-typedef EventTemplateEx<DeviceEventID::ExecuteString, ExecuteData> ExecuteEvent;
 
 
 // -----------------------------------------------------------

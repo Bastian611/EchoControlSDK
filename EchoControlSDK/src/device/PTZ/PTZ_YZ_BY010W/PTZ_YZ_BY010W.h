@@ -8,8 +8,12 @@ class PTZ_YZ_BY010W : public IPTZ_Device
 {
 public:
     using Self = PTZ_YZ_BY010W;
-    //FACTORY_ID_CHILD_WITH_SPEC_NAME(DeviceBase, Self, "YZ-BY010W")
-    FACTORY_CHILD_WITH_SPEC_NAME(DeviceBase, PTZ_YZ_BY010W, "YZ-BY010W")
+
+    // 定义静态 ID 常量
+    static const u32 ID = MAKE_DEV_OID(did::DEVICE_PTZ, did::PTZ_YZ_BY010W);
+
+    // 使用 5 参数宏，Key 类型为 u32
+    FACTORY_ID_CHILD_WITH_SPEC_NAME(u32, ID, DeviceBase, Self, "YZ-BY010W")
 
     PTZ_YZ_BY010W();
     virtual ~PTZ_YZ_BY010W();
