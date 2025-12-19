@@ -96,9 +96,6 @@ protected:
     // 子类在此注册特有属性
     virtual void OnRegisterProperties();
 
-    // 子类在此注册指令 (如果用旧模式)
-    virtual void OnRegisterCommands();
-
     // [关键] 子类处理收到的 Packet
     virtual void OnPacketReceived(std::shared_ptr<rpc::RpcPacket> pkt);
 

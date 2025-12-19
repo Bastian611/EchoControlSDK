@@ -11,15 +11,12 @@ Light_HL_525_4W::~Light_HL_525_4W() {
 }
 
 bool Light_HL_525_4W::Init(int slotID, const std::map<str, str>& config) {
-    // 1. 调用基类初始化
+    // 基类初始化
     if (!DeviceBase::Init(slotID, config)) return false;
 
-    // 2. 绑定 ID
-    m_deviceID = DeviceID(did::DEVICE_LIGHT, did::LIGHT_HL_525_4W);
-
-    // 3. 获取配置
-    m_ip = m_props.GetString("IP");
-    m_port = m_props.Get<int>("Port");
+    // 获取配置
+    m_ip = GetPropValue<str>("IP");
+    m_port = GetPropValue<int>("Port");
 
     return true;
 }
@@ -45,13 +42,13 @@ void Light_HL_525_4W::SendHexCmd(u8 cmd, u8 vh, u8 vl) {
 
     u8 buf[7];
     buf[0] = 0xFF; // Header
-    buf[1] = 0x01;
+    buf[1] = 0x01; // HL-525 固定地址 0x01 (不同于云台的动态地址)
     buf[2] = 0x00;
     buf[3] = cmd;
     buf[4] = vh;
     buf[5] = vl;
 
-    // Checksum: Sum(Byte 1~5) & 0xFF
+    // Checksum
     u32 sum = 0;
     for (int i = 1; i <= 5; i++) sum += buf[i];
     buf[6] = (u8)(sum & 0xFF);

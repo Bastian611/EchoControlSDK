@@ -14,10 +14,10 @@ namespace DeviceEventID {
     // EventTypes::User 通常是 512
 
     // 强类型协议包到达事件
-    const int PacketArrival = EventTypes::User + 2;
+    const int PacketArrival = EventTypes::User + 1;
 
     // 配置更新事件 (例如 IP 变更)
-    const int ConfigUpdate = EventTypes::User + 3;
+    const int ConfigUpdate = EventTypes::User + 2;
 }
 
 

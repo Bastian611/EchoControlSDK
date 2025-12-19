@@ -5,6 +5,7 @@
 // 引入具体设备头文件
 #include "Light/Light_HL_525_4W/Light_HL_525_4W.h"
 #include "PTZ/PTZ_YZ_BY010W/PTZ_YZ_BY010W.h"
+#include "Sound/Sound_NetSpeaker_V2/Sound_NetSpeaker_V2.h"
 
 #include <map>
 
@@ -19,19 +20,19 @@ static std::map<str, u32> g_ModelToIDMap;
 void InitModelMapping() {
     if (!g_ModelToIDMap.empty()) return;
 
-    // [手动维护] 确保配置文件里的字符串能找到对应的 OID
     // Light
     g_ModelToIDMap["HL-525"] = Light_HL_525_4W::ID;
 
     // PTZ
     g_ModelToIDMap["YZ-BY010W"] = PTZ_YZ_BY010W::ID;
 
-    // ... 后续添加
+    // Sound
+    g_ModelToIDMap["NETSPEAKER-V2"] = Sound_NetSpeaker_V2::ID;
 }
 
 // 实现 DeviceFactory.h 中声明的查找函数
 u32 GetDeviceOIDByModelName(const str& modelName) {
-    InitModelMapping(); // 懒加载初始化
+    InitModelMapping(); 
 
     auto it = g_ModelToIDMap.find(modelName);
     if (it != g_ModelToIDMap.end()) {
@@ -46,8 +47,9 @@ u32 GetDeviceOIDByModelName(const str& modelName) {
 FACTORY_BEGIN(u32, DeviceBase)
 
 // 使用具体类的 ID 常量进行注册
-FACTORY_APPEND(Light_HL_525_4W::ID,     Light_HL_525_4W,    DeviceBase)
-FACTORY_APPEND(PTZ_YZ_BY010W::ID,       PTZ_YZ_BY010W,      DeviceBase)
+FACTORY_APPEND(Light_HL_525_4W::ID,         Light_HL_525_4W,        DeviceBase)
+FACTORY_APPEND(PTZ_YZ_BY010W::ID,           PTZ_YZ_BY010W,          DeviceBase)
+FACTORY_APPEND(Sound_NetSpeaker_V2::ID,     Sound_NetSpeaker_V2,    DeviceBase)
 
 FACTORY_END(u32, DeviceBase)
 

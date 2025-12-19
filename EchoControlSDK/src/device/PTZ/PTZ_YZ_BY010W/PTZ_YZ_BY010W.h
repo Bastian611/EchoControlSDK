@@ -1,14 +1,15 @@
 #pragma once
 #include "../IPTZ_Device.h"
-#include "../../../net/TCPSocket.h"
+#include "net/TCPSocket.h"
+#include "debug/Logger.h"
 
 ECCS_BEGIN
 
 class PTZ_YZ_BY010W : public IPTZ_Device
 {
 public:
-    using Self = PTZ_YZ_BY010W;
 
+    using Self = PTZ_YZ_BY010W; // 使用别名，避免编译出错
     // 定义静态 ID 常量
     static const u32 ID = MAKE_DEV_OID(did::DEVICE_PTZ, did::PTZ_YZ_BY010W);
 

@@ -46,9 +46,6 @@ bool DeviceBase::Init(int slotID, const std::map<str, str>& config) {
         return false;
     }
 
-    // 注册旧指令钩子
-    OnRegisterCommands();
-
     return true;
 }
 
@@ -137,23 +134,7 @@ void DeviceBase::run() {
 
 // 虚函数默认实现
 void DeviceBase::OnRegisterProperties() {}
-void DeviceBase::OnRegisterCommands() {}
 void DeviceBase::OnPacketReceived(std::shared_ptr<rpc::RpcPacket> pkt) {}
 void DeviceBase::OnCustomEvent(Event_Ptr& e) {}
-
-void DeviceBase::Dispatch(int cmdID, const str& args) {
-    auto it = m_dispatcher.find(cmdID);
-    if (it != m_dispatcher.end()) {
-        try {
-            it->second(args);
-        }
-        catch (std::exception& e) {
-            LOG_ERROR("[Slot %d] Cmd %d Exception: %s", m_slotID, cmdID, e.what());
-        }
-    }
-    else {
-        LOG_WARNING("[Slot %d] Cmd %d Not Registered", m_slotID, cmdID);
-    }
-}
 
 ECCS_END

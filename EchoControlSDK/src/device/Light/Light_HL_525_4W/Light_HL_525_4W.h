@@ -1,18 +1,19 @@
 #pragma once
 #include "../ILight_Device.h"
-#include "../../../net/TCPSocket.h"
+#include "net/TCPSocket.h"
+#include "debug/Logger.h"
 
 ECCS_BEGIN
 
 class Light_HL_525_4W : public ILight_Device
 {
 public:
-    
+
     // ×¢²áID
     static const u32 ID = MAKE_DEV_OID(did::DEVICE_LIGHT, did::LIGHT_HL_525_4W);
     // ×¢²á¹¤³§ºê
     //FACTORY_ID_CHILD_WITH_SPEC_NAME(DeviceBase, Self, "HL-525")
-    FACTORY_ID_CHILD_WITH_SPEC_NAME(u32, ID, DeviceBase, did::LIGHT_HL_525_4W, "HL-525")
+    FACTORY_ID_CHILD_WITH_SPEC_NAME(u32, ID, DeviceBase, Light_HL_525_4W, "HL-525")
 
     Light_HL_525_4W();
     virtual ~Light_HL_525_4W();

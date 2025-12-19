@@ -115,7 +115,7 @@ void ConfigManager::LoadSystem(const str& rulePath, const str& paramPath)
 
         if (dev) {
             // 构造配置 Map
-            std::map<str, str> confMap;
+            //std::map<str, str> confMap;
             // 手动提取通用属性
             //confMap["ID"] = idStr;
             //confMap["IP"] = devParser.Get(secName, "IP");
