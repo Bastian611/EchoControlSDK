@@ -1,49 +1,24 @@
 #pragma once
 #include "../DeviceBase.h"
+#include "debug/Logger.h"
 
 ECCS_BEGIN
 
 class ILight_Device : public DeviceBase
 {
 public:
-    // 覆盖基类的 Packet 处理函数
-    virtual void OnPacketReceived(std::shared_ptr<rpc::RpcPacket> pkt) override {
-        u32 id = pkt->GetID();
-
-        // 开关
-        if (id == rpc::RqLightSwitch::_FACTORY_ID_) {
-            auto req = std::dynamic_pointer_cast<rpc::RqLightSwitch>(pkt);
-            SetSwitch(req->data); // data 是 bool
-            return;
-        }
-
-        // 亮度
-        if (id == rpc::RqLightLevel::_FACTORY_ID_) {
-            auto req = std::dynamic_pointer_cast<rpc::RqLightLevel>(pkt);
-            SetBrightness(req->data); // data 是 u8
-            return;
-        }
-
-        // 频闪
-        if (id == rpc::RqLightStrobe::_FACTORY_ID_) {
-            auto req = std::dynamic_pointer_cast<rpc::RqLightStrobe>(pkt);
-            SetStrobe(req->data); // data 是 bool
-            return;
-        }
-
-        // 状态查询 (通用处理，子类需维护状态缓存)
-        if (id == rpc::RqQueryLightStatus::_FACTORY_ID_) {
-            // 这里可以调用 GetStatus 并回复，暂时留空或由子类处理
-            // ...
-            return;
-        }
-    }
-
-protected:
     // === 纯虚接口：由具体驱动实现 ===
     virtual void SetSwitch(bool isOpen) = 0;
     virtual void SetBrightness(u8 level) = 0;
-    virtual void SetStrobe(bool isOpen) = 0;
+    /**
+     * @brief 设置频闪 (扩展功能)
+     * @param isOpen true=开启频闪, false=关闭
+     * @note 默认实现为不支持。如果设备支持频闪，请在子类中重写此函数。
+     */
+    virtual void SetStrobe(bool isOpen) {
+        LOG_WARNING("[Slot %d] Device (Model: %s) does not support Strobe.",
+            m_slotID, GetProperty("Model").c_str());
+    }
 };
 
 ECCS_END

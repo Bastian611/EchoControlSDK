@@ -21,7 +21,7 @@ public:
 
     virtual bool Init(int slotID, const std::map<str, str>& config) override;
 
-protected:
+public:
     virtual void PtzMove(u8 action, u8 speed) override;
     virtual void PtzStop() override;
     virtual void PtzPreset(u8 action, u8 index) override;

@@ -9,11 +9,11 @@ class Light_HL_525_4W : public ILight_Device
 {
 public:
 
+    using Self = Light_HL_525_4W;
     // 注册ID
     static const u32 ID = MAKE_DEV_OID(did::DEVICE_LIGHT, did::LIGHT_HL_525_4W);
     // 注册工厂宏
-    //FACTORY_ID_CHILD_WITH_SPEC_NAME(DeviceBase, Self, "HL-525")
-    FACTORY_ID_CHILD_WITH_SPEC_NAME(u32, ID, DeviceBase, Light_HL_525_4W, "HL-525")
+    FACTORY_ID_CHILD_WITH_SPEC_NAME(u32, ID, DeviceBase, Self, "HL-525")
 
     Light_HL_525_4W();
     virtual ~Light_HL_525_4W();
@@ -21,7 +21,7 @@ public:
     // 覆盖初始化
     virtual bool Init(int slotID, const std::map<str, str>& config) override;
 
-protected:
+public:
     // --- 实现 ILight_Device 的纯虚接口 ---
     virtual void SetSwitch(bool isOpen) override;
     virtual void SetBrightness(u8 level) override;

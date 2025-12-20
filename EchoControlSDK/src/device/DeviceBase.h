@@ -6,6 +6,7 @@
 #include "../thread/thread.h"
 #include "../utils/factory.hpp"
 #include "../protocol/Packet_Def.h"
+#include "../debug/Logger.h"
 #include <functional>
 #include <map>
 #include <sstream>
@@ -96,17 +97,11 @@ protected:
     // 子类在此注册特有属性
     virtual void OnRegisterProperties();
 
-    // [关键] 子类处理收到的 Packet
-    virtual void OnPacketReceived(std::shared_ptr<rpc::RpcPacket> pkt);
-
     // 自定义事件处理
     virtual void OnCustomEvent(Event_Ptr& e);
 
     // 线程循环实现
     virtual void run() override;
-
-private:
-    void Dispatch(int cmdID, const str& args);
 
 protected:
     int m_slotID;

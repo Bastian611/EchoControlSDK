@@ -1,7 +1,7 @@
 ﻿// EchoControlSDK.cpp: 定义应用程序的入口点。
 //
 
-#include "EchoControlSDK.h"
+#include "../include/EchoControlSDK.h"
 
 using namespace std;
 

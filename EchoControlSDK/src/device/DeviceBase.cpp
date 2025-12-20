@@ -1,5 +1,5 @@
 #include "DeviceBase.h"
-#include "../debug/Logger.h"
+#include "handler/EchoControlHandler.h"
 #include <cstdlib> // for strtoul
 
 ECCS_BEGIN
@@ -124,7 +124,8 @@ void DeviceBase::run() {
         if (e->eId() == DeviceEventID::PacketArrival) {
             auto pe = std::dynamic_pointer_cast<PacketEvent>(e);
             if (pe && pe->GetPacket()) {
-                OnPacketReceived(pe->GetPacket());
+                // 调用单例 Handler 进行分发
+                EchoControlHandler::Instance().Dispatch(this, pe->GetPacket());
             }
         }
 
@@ -134,7 +135,6 @@ void DeviceBase::run() {
 
 // 虚函数默认实现
 void DeviceBase::OnRegisterProperties() {}
-void DeviceBase::OnPacketReceived(std::shared_ptr<rpc::RpcPacket> pkt) {}
 void DeviceBase::OnCustomEvent(Event_Ptr& e) {}
 
 ECCS_END

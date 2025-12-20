@@ -23,7 +23,7 @@ public:
     virtual bool Start() override;
     virtual void Stop() override;
 
-protected:
+public:
     // --- 实现 ISound_Device 纯虚接口 ---
     virtual void PlayFile(const char* filename, bool loop) override;
     virtual void StopPlay() override;
