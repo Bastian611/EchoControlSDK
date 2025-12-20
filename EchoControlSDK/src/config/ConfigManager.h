@@ -1,6 +1,7 @@
 #pragma once
 #include "../global.h"
 #include "../utils/singleton.hpp"
+#include "../utils/configparser.h"
 #include <map>
 #include <vector>
 
@@ -19,7 +20,10 @@ struct SlotRule {
 class ConfigManager : public Singleton<ConfigManager>
 {
     friend class Singleton<ConfigManager>;
-    ConfigManager() = default;
+
+private:
+
+    ConfigManager();
 
 public:
     ~ConfigManager();
@@ -30,11 +34,21 @@ public:
     // 获取运行时设备指针
     DeviceBase* GetDevice(int slotID);
 
+    // 用于 ECCS_SetConfig 的接口
+    bool UpdateConfig(int slotID, const str& key, const str& value);
+
     // 释放所有设备资源
     void Release();
 
+    int GetDeviceCount() const { return m_devices.size(); }
+
+    // 按索引获取 (线性扫描 map，虽然效率低但对于几十个设备无所谓，且保证顺序稳定)
+    DeviceBase* GetDeviceByIndex(int index);
+
 private:
     int ParseSlotID(const str& sectionName);
+    // 保存参数文件路径，用于回写
+    str m_paramPath;
 
 private:
     std::map<int, SlotRule> m_rules;

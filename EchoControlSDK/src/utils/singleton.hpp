@@ -9,7 +9,10 @@ template<typename T>
 class Singleton
 {
     NON_COPYABLE(Singleton);
+
+protected:
     Singleton() {}
+    virtual~Singleton() {}
 
 public:
     static T* getInstance()

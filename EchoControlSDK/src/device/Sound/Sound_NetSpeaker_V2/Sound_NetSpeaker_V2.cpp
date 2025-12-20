@@ -9,13 +9,16 @@ ECCS_BEGIN
 Sound_NetSpeaker_V2::Sound_NetSpeaker_V2()
     : m_cseq(0), m_heartbeatThread(nullptr), m_keepHeartbeat(false)
 {
+
 }
 
-Sound_NetSpeaker_V2::~Sound_NetSpeaker_V2() {
+Sound_NetSpeaker_V2::~Sound_NetSpeaker_V2() 
+{
     Stop(); // 确保线程停止
 }
 
-bool Sound_NetSpeaker_V2::Init(int slotID, const std::map<str, str>& config) {
+bool Sound_NetSpeaker_V2::Init(int slotID, const std::map<str, str>& config) 
+{
     if (!DeviceBase::Init(slotID, config)) return false;
 
     m_ip = GetPropValue<str>("IP");
@@ -27,7 +30,8 @@ bool Sound_NetSpeaker_V2::Init(int slotID, const std::map<str, str>& config) {
     return true;
 }
 
-bool Sound_NetSpeaker_V2::Start() {
+bool Sound_NetSpeaker_V2::Start() 
+{
     if (!DeviceBase::Start()) return false;
 
     // 启动心跳线程
@@ -37,7 +41,8 @@ bool Sound_NetSpeaker_V2::Start() {
     return true;
 }
 
-void Sound_NetSpeaker_V2::Stop() {
+void Sound_NetSpeaker_V2::Stop() 
+{
     // 停止心跳线程
     m_keepHeartbeat = false;
     if (m_heartbeatThread) {
@@ -55,7 +60,8 @@ void Sound_NetSpeaker_V2::Stop() {
 
 // --- 业务逻辑 ---
 
-void Sound_NetSpeaker_V2::PlayFile(const char* filename, bool loop) {
+void Sound_NetSpeaker_V2::PlayFile(const char* filename, bool loop) 
+{
     // 协议：{"command":"start_play","cseq":"x", "index":"filename"}
     // 注意：如果 filename 是路径，协议可能不同，这里按通用处理
     char param[256];
@@ -67,18 +73,21 @@ void Sound_NetSpeaker_V2::PlayFile(const char* filename, bool loop) {
     SendJsonCmd(BuildJson("start_play", param));
 }
 
-void Sound_NetSpeaker_V2::StopPlay() {
+void Sound_NetSpeaker_V2::StopPlay() 
+{
     SendJsonCmd(BuildJson("stop_play"));
 }
 
-void Sound_NetSpeaker_V2::TTSPlay(const char* text) {
+void Sound_NetSpeaker_V2::TTSPlay(const char* text) 
+{
     // 协议：start_tts_play, txt=...
     char param[512];
     snprintf(param, sizeof(param), "\"txt\":\"%s\",\"play_vol\":\"80\"", text);
     SendJsonCmd(BuildJson("start_tts_play", param));
 }
 
-void Sound_NetSpeaker_V2::SetMic(bool isOpen) {
+void Sound_NetSpeaker_V2::SetMic(bool isOpen) 
+{
     // 喊话模式需要切换 model
     if (isOpen) {
         // 切换到 mic_broadcast 模式
@@ -92,9 +101,20 @@ void Sound_NetSpeaker_V2::SetMic(bool isOpen) {
     }
 }
 
+void Sound_NetSpeaker_V2::SetVolume(u8 vol)
+{
+
+}
+
+void Sound_NetSpeaker_V2::GetVolume(u8 vol_play, u8 vol_cap)
+{
+
+}
+
 // --- 内部辅助 ---
 
-str Sound_NetSpeaker_V2::BuildJson(const char* cmd, const char* params) {
+str Sound_NetSpeaker_V2::BuildJson(const char* cmd, const char* params) 
+{
     char buf[1024];
     m_cseq++;
 
@@ -109,7 +129,8 @@ str Sound_NetSpeaker_V2::BuildJson(const char* cmd, const char* params) {
     return str(buf);
 }
 
-void Sound_NetSpeaker_V2::SendJsonCmd(const str& json) {
+void Sound_NetSpeaker_V2::SendJsonCmd(const str& json) 
+{
     if (!Connect()) return;
 
     try {
@@ -124,7 +145,8 @@ void Sound_NetSpeaker_V2::SendJsonCmd(const str& json) {
     }
 }
 
-bool Sound_NetSpeaker_V2::Connect() {
+bool Sound_NetSpeaker_V2::Connect() 
+{
     if (IsOnline() && m_socket && m_socket->isOpen()) return true;
 
     try {
@@ -142,7 +164,8 @@ bool Sound_NetSpeaker_V2::Connect() {
 }
 
 // 独立的线程发送心跳
-void Sound_NetSpeaker_V2::HeartbeatLoop() {
+void Sound_NetSpeaker_V2::HeartbeatLoop() 
+{
     int counter = 0;
     while (m_keepHeartbeat) {
         msleep(100);
@@ -158,9 +181,11 @@ void Sound_NetSpeaker_V2::HeartbeatLoop() {
 }
 
 // 在主线程中处理事件
-void Sound_NetSpeaker_V2::OnCustomEvent(Event_Ptr& e) {
+void Sound_NetSpeaker_V2::OnCustomEvent(Event_Ptr& e)
+{
     // 判断是否是心跳事件
-    if (e->eId() == EVENT_HEARTBEAT) {
+    if (e->eId() == EVENT_HEARTBEAT) 
+    {
         SendJsonCmd(BuildJson("online"));
         // LOG_DEBUG("Heartbeat sent via main thread.");
     }

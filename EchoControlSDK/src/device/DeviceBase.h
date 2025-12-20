@@ -69,6 +69,9 @@ public:
     // 获取设备身份 ID
     DeviceID GetDeviceID() const;
 
+    // [新增] 供 SDK 内部使用，用于 ConfigManager 寻址
+    int GetSlotID() const { return m_slotID; }
+
     // 状态回调注册
     using StatusCallback = std::function<void(std::shared_ptr<rpc::RpcPacket>)>;
     void SetStatusCallback(StatusCallback cb);

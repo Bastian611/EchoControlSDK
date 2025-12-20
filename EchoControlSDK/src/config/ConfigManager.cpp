@@ -10,6 +10,11 @@
 
 ECCS_BEGIN
 
+ConfigManager::ConfigManager()
+{
+
+}
+
 ConfigManager::~ConfigManager() {
     Release();
 }
@@ -29,6 +34,16 @@ DeviceBase* ConfigManager::GetDevice(int slotID) {
     return (it != m_devices.end()) ? it->second : nullptr;
 }
 
+DeviceBase* ConfigManager::GetDeviceByIndex(int index) 
+{
+    if (index < 0 || index >= m_devices.size()) {
+        return nullptr;
+    }
+    auto it = m_devices.begin();
+    std::advance(it, index);
+    return it->second;
+}
+
 int ConfigManager::ParseSlotID(const str& sectionName) {
     if (sectionName.find("Slot_") != 0) return -1;
     str numStr = sectionName.substr(5);
@@ -37,6 +52,7 @@ int ConfigManager::ParseSlotID(const str& sectionName) {
 
 void ConfigManager::LoadSystem(const str& rulePath, const str& paramPath)
 {
+    m_paramPath = paramPath; // 记录路径
     LOG_INFO("ConfigManager: Loading System... Rules: %s, Params: %s", rulePath.c_str(), paramPath.c_str());
 
     // 加载规则 (system_rules.sys)
@@ -141,6 +157,22 @@ void ConfigManager::LoadSystem(const str& rulePath, const str& paramPath)
             LOG_ERROR("[ConfigManager] Factory Failed for OID 0x%X", expectedOID);
         }
     }
+}
+
+bool ConfigManager::UpdateConfig(int slotID, const str& key, const str& value) {
+    if (m_paramPath.empty()) return false;
+
+    // 重新加载解析器 (或者保持一个成员变量)
+    ConfigParser::ConfigParser parser(m_paramPath);
+    if (!parser.parseConfigFile()) return false;
+
+    str section = "Slot_" + std::to_string(slotID);
+
+    // 更新内存和文件
+    if (parser.Set(section, key, value)) {
+        return parser.writeValueToFile();
+    }
+    return false;
 }
 
 ECCS_END

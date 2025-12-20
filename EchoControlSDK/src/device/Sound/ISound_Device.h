@@ -9,6 +9,11 @@ public:
     // === ´¿Ðé½Ó¿Ú ===
     virtual void PlayFile(const char* filename, bool loop) = 0;
     virtual void StopPlay() = 0;
+    virtual void SetVolume(u8 vol) = 0;
+    virtual void GetVolume(u8 vol_play, u8 vol_cap) {
+        LOG_WARNING("[Slot %d] Device (Model: %s) does not support GetVolume.",
+            m_slotID, GetProperty("Model").c_str());
+    }
     virtual void TTSPlay(const char* text) {
         LOG_WARNING("[Slot %d] Device (Model: %s) does not support TTS.",
             m_slotID, GetProperty("Model").c_str());

@@ -32,9 +32,8 @@ public:
 
     virtual void OnCustomEvent(Event_Ptr& e) override;
 
-    // 我们需要在基类 DeviceBase 增加 SetVolume 接口，或者在 ISound_Device 中增加
-    // 假设 ISound_Device 中有 SetVolume，这里补上实现
-    // virtual void SetVolume(u8 vol) override; 
+    virtual void SetVolume(u8 vol) override; 
+    virtual void GetVolume(u8 vol_play, u8 vol_cap) override;
 
 private:
     void SendJsonCmd(const str& json);

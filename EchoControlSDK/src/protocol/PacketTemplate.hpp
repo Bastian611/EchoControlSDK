@@ -9,6 +9,7 @@ namespace rpc {
     class Packet : public RpcPacket {
     public:
         const static u32 _FACTORY_ID_ = ID;
+        using Data_Type = TData;
 
         // 必须匹配 factory.hpp 中要求的签名
         static RpcPacket* createInstance() {
