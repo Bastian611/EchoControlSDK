@@ -22,6 +22,11 @@ public:
         LOG_WARNING("[Slot %d] Device (Model: %s) does not support Mic.",
             m_slotID, GetProperty("Model").c_str());
     }
+    // 推送音频数据接口
+    virtual void PushAudio(const u8* data, u32 len) {
+        LOG_WARNING("[Slot %d] Device (Model: %s) does not support Mic.",
+            m_slotID, GetProperty("Model").c_str());
+    }
 };
 
 ECCS_END

@@ -1,6 +1,8 @@
 #pragma once
 #include "../ISound_Device.h"
-#include "../../../net/TCPSocket.h"
+#include "net/TCPSocket.h"
+#include "net/UDPSocket.h"
+#include "utils/ring_buffer.h"
 #include <atomic>
 #include <thread>
 
@@ -35,6 +37,8 @@ public:
     virtual void SetVolume(u8 vol) override; 
     virtual void GetVolume(u8 vol_play, u8 vol_cap) override;
 
+    virtual void PushAudio(const u8* data, u32 len) override; 
+
 private:
     void SendJsonCmd(const str& json);
     str BuildJson(const char* cmd, const char* params = "");
@@ -47,6 +51,7 @@ private:
 
     // 定义内部使用的心跳事件ID
     static const int EVENT_HEARTBEAT = EventTypes::User + 100;
+    void AudioTxLoop(); 
 
 private:
     str m_ip;
@@ -59,6 +64,10 @@ private:
     // 心跳专用
     std::thread* m_heartbeatThread;
     std::atomic<bool> m_keepHeartbeat;
+
+    RingBuffer* m_audioBuf;
+    std::thread* m_audioThread;
+    bool m_isMicOpen;
 };
 
 ECCS_END

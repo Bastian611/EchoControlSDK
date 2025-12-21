@@ -7,9 +7,12 @@
 #include "../utils/factory.hpp"
 #include "../protocol/Packet_Def.h"
 #include "../debug/Logger.h"
+#include "../time/time_utils.h"
+#include "../utils/buffer.h"
 #include <functional>
 #include <map>
 #include <sstream>
+#include <vector>
 
 ECCS_BEGIN
 
@@ -69,7 +72,7 @@ public:
     // 获取设备身份 ID
     DeviceID GetDeviceID() const;
 
-    // [新增] 供 SDK 内部使用，用于 ConfigManager 寻址
+    // 供 SDK 内部使用，用于 ConfigManager 寻址
     int GetSlotID() const { return m_slotID; }
 
     // 状态回调注册
@@ -81,7 +84,7 @@ protected:
     // 供子类使用的 API (Protected)
     // ------------------------------------------------
 
-    // [新增] 注册属性
+    // 注册属性
     template <typename T>
     void RegisterProp(const str& key, T defaultVal, const str& desc = "") {
         std::stringstream ss;
@@ -105,6 +108,26 @@ protected:
 
     // 线程循环实现
     virtual void run() override;
+
+    // 启动/停止读取线程 (供子类在 Start/Stop 中调用)
+    void StartReader();
+    void StopReader();
+
+    // 原始数据接收钩子
+    virtual void OnRawDataReceived(const u8* data, u32 len);
+
+    // 底层读取接口 (子类必须实现，因为TCP/UDP/串口读取方式不同)
+    // 返回读取的字节数，<=0 表示错误或超时
+    virtual int ReadRaw(u8* buf, u32 maxLen) { return 0; }
+
+private:
+    // 读取线程函数
+    void ReadLoop();
+
+private:
+    // 读取线程相关
+    std::thread* m_readThread = nullptr;
+    std::atomic<bool> m_keepReading = { false };
 
 protected:
     int m_slotID;

@@ -137,4 +137,47 @@ void DeviceBase::run() {
 void DeviceBase::OnRegisterProperties() {}
 void DeviceBase::OnCustomEvent(Event_Ptr& e) {}
 
+void DeviceBase::OnRawDataReceived(const u8* data, u32 len) {}
+
+void DeviceBase::StartReader() {
+    if (m_keepReading) return;
+    m_keepReading = true;
+    m_readThread = new std::thread(&DeviceBase::ReadLoop, this);
+}
+
+void DeviceBase::StopReader() {
+    m_keepReading = false;
+    if (m_readThread) {
+        if (m_readThread->joinable()) m_readThread->join();
+        delete m_readThread;
+        m_readThread = nullptr;
+    }
+}
+
+void DeviceBase::ReadLoop() {
+    // 缓冲区 1KB
+    std::vector<u8> buf(1024);
+
+    while (m_keepReading) {
+        // 如果设备掉线，稍微休眠，避免死循环空转
+        if (!IsOnline()) {
+            msleep(200);
+            continue;
+        }
+
+        // 调用子类实现的 ReadRaw (阻塞或带超时的读取)
+        int len = ReadRaw(buf.data(), buf.size());
+
+        if (len > 0) {
+            // 收到数据，交给子类解析
+            OnRawDataReceived(buf.data(), len);
+        }
+        else {
+            // 读取超时或错误，稍微休眠
+            // 注意：如果是严重错误（如断开），子类的 ReadRaw 内部应该处理连接状态
+            msleep(10);
+        }
+    }
+}
+
 ECCS_END

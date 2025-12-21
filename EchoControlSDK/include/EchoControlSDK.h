@@ -20,7 +20,7 @@ extern "C" {
     // 1. 基础类型与回调定义
     // =======================================================
 
-    // 设备句柄 (不透明指针)
+    // 设备句柄
     typedef void* ECCS_HANDLE;
 #define ECCS_INVALID_HANDLE NULL
 
@@ -47,7 +47,7 @@ extern "C" {
      * @brief 初始化 SDK     
 	 * @return ECCS_RET_SUCCESS 成功
      */
-    ECCS_API ECCS_ReturnCode ECCS_Init();
+    ECCS_API ECCS_Error ECCS_Init();
 
     /**
      * @brief 释放 SDK 资源 (停止所有线程，关闭网络)
@@ -82,7 +82,7 @@ extern "C" {
      * @brief 注册状态/数据回调
      * @param userCtx 用户自定义指针，回调时原样传回
      */
-    ECCS_API ECCS_ReturnCode ECCS_RegisterCallback(ECCS_HANDLE hDev, ECCS_CallbackFunc cb, void* userCtx);
+    ECCS_API ECCS_Error ECCS_RegisterCallback(ECCS_HANDLE hDev, ECCS_CallbackFunc cb, void* userCtx);
     ECCS_API bool ECCS_IsOnline(ECCS_HANDLE hDev);
 
     /**
@@ -90,25 +90,25 @@ extern "C" {
      * @param key 属性名 (如 "DefaultVolume", "Name", "IP")
      * @param value 属性值
      */
-    ECCS_API ECCS_ReturnCode ECCS_SetConfig(ECCS_HANDLE hDev, const char* key, const char* value);
+    ECCS_API ECCS_Error ECCS_SetConfig(ECCS_HANDLE hDev, const char* key, const char* value);
 
     /**
      * @brief 获取设备属性 (内存值)
      */
-    ECCS_API ECCS_ReturnCode ECCS_GetConfig(ECCS_HANDLE hDev, const char* key, char* outBuf, int maxLen);
+    ECCS_API ECCS_Error ECCS_GetConfig(ECCS_HANDLE hDev, const char* key, char* outBuf, int maxLen);
 
     // =======================================================
     // 4. 强光控制 (Light)
     // =======================================================
 
     // 开关: 1=Open, 0=Close
-    ECCS_API ECCS_ReturnCode ECCS_Light_SetSwitch(ECCS_HANDLE hDev, int isOpen);
+    ECCS_API ECCS_Error ECCS_Light_SetSwitch(ECCS_HANDLE hDev, int isOpen);
 
     // 亮度: 0-100
-    ECCS_API ECCS_ReturnCode ECCS_Light_SetLevel(ECCS_HANDLE hDev, int level);
+    ECCS_API ECCS_Error ECCS_Light_SetLevel(ECCS_HANDLE hDev, int level);
 
     // 频闪: 1=Open, 0=Close
-    ECCS_API ECCS_ReturnCode ECCS_Light_SetStrobe(ECCS_HANDLE hDev, int isOpen);
+    ECCS_API ECCS_Error ECCS_Light_SetStrobe(ECCS_HANDLE hDev, int isOpen);
 
     // =======================================================
     // 5. 云台控制 (PTZ)
@@ -116,36 +116,38 @@ extern "C" {
 
     // 移动: action(1=Up, 2=Down, 3=Left, 4=Right, 5=Stop)
     // speed: 0-64
-    ECCS_API ECCS_ReturnCode ECCS_PTZ_Move(ECCS_HANDLE hDev, int action, int speed);
+    ECCS_API ECCS_Error ECCS_PTZ_Move(ECCS_HANDLE hDev, int action, int speed);
 
     // 变倍: isZoomIn(1=Tele/拉近, 0=Wide/推远)
-    ECCS_API ECCS_ReturnCode ECCS_PTZ_Zoom(ECCS_HANDLE hDev, int isZoomIn);
+    ECCS_API ECCS_Error ECCS_PTZ_Zoom(ECCS_HANDLE hDev, int isZoomIn);
 
     // 预置位: action(1=Set, 2=Goto), index(1-255)
-    ECCS_API ECCS_ReturnCode ECCS_PTZ_Preset(ECCS_HANDLE hDev, int action, int index);
+    ECCS_API ECCS_Error ECCS_PTZ_Preset(ECCS_HANDLE hDev, int action, int index);
 
     // =======================================================
     // 6. 强声控制 (Sound)
     // =======================================================
 
     // 播放: filename(文件名或索引), loop(1=循环)
-    ECCS_API ECCS_ReturnCode ECCS_Sound_Play(ECCS_HANDLE hDev, const char* filename, int loop);
+    ECCS_API ECCS_Error ECCS_Sound_Play(ECCS_HANDLE hDev, const char* filename, int loop);
 
-    ECCS_API ECCS_ReturnCode ECCS_Sound_Stop(ECCS_HANDLE hDev);
+    ECCS_API ECCS_Error ECCS_Sound_Stop(ECCS_HANDLE hDev);
 
-    ECCS_API ECCS_ReturnCode ECCS_Sound_SetVolume(ECCS_HANDLE hDev, int volume); // 0-100
+    ECCS_API ECCS_Error ECCS_Sound_SetVolume(ECCS_HANDLE hDev, int volume); // 0-100
 
-    ECCS_API ECCS_ReturnCode ECCS_Sound_TTS(ECCS_HANDLE hDev, const char* text);
+    ECCS_API ECCS_Error ECCS_Sound_TTS(ECCS_HANDLE hDev, const char* text);
 
     // 喊话模式: 1=开启, 0=关闭
-    ECCS_API ECCS_ReturnCode ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen);
+    ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen);
 
     /**
-     * @brief 获取音频流本地代理端口
-     * @return 端口号 (如 10003)，返回 0 表示未就绪或不支持
-     * @note 开启喊话后，向 127.0.0.1:[Port] 发送音频流，SDK会自动转发给设备
+     * @brief 推送音频流数据 (直接写入内部缓冲区)
+     * @param hDev 设备句柄
+     * @param data 音频数据指针 (PCM/MP3)
+     * @param len  数据长度
+     * @return ECCS_RET_SUCCESS 成功, ECCS_DEVICE_BUSY 缓冲区满(丢弃)
      */
-    ECCS_API int ECCS_Sound_GetStreamPort(ECCS_HANDLE hDev);
+    ECCS_API ECCS_Error ECS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len);
 
 #ifdef __cplusplus
 }

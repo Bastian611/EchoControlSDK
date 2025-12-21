@@ -30,6 +30,21 @@ private:
     void SendPelcoD(u8 cmd1, u8 cmd2, u8 d1, u8 d2);
     bool Connect();
 
+protected:
+    // 实现基类的 IO 接口
+    virtual int ReadRaw(u8* buf, u32 maxLen) override;
+
+    // 实现协议解析
+    virtual void OnRawDataReceived(const u8* data, u32 len) override;
+
+    // 覆盖 Start/Stop 以启动读取线程
+    virtual bool Start() override;
+    virtual void Stop() override;
+
+private:
+    // 辅助：解析角度包
+    void ParsePelcoResponse(const u8* data, u32 len);
+
 private:
     str m_ip;
     int m_port;

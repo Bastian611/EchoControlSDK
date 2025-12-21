@@ -7,7 +7,8 @@
 ECCS_BEGIN
 
 Sound_NetSpeaker_V2::Sound_NetSpeaker_V2()
-    : m_cseq(0), m_heartbeatThread(nullptr), m_keepHeartbeat(false)
+    : m_cseq(0), m_heartbeatThread(nullptr), m_keepHeartbeat(false), m_isMicOpen(false),
+      m_audioThread(nullptr), m_audioBuf(nullptr)
 {
 
 }
@@ -38,6 +39,9 @@ bool Sound_NetSpeaker_V2::Start()
     m_keepHeartbeat = true;
     m_heartbeatThread = new std::thread(&Sound_NetSpeaker_V2::HeartbeatLoop, this);
 
+    m_audioBuf = new RingBuffer(1024 * 100); // 100KB 缓存
+    m_audioThread = new std::thread(&Sound_NetSpeaker_V2::AudioTxLoop, this);
+
     return true;
 }
 
@@ -49,6 +53,18 @@ void Sound_NetSpeaker_V2::Stop()
         if (m_heartbeatThread->joinable()) m_heartbeatThread->join();
         delete m_heartbeatThread;
         m_heartbeatThread = nullptr;
+    }
+
+    if (m_audioThread) {
+        if (m_audioThread->joinable()) m_audioThread->join();
+        delete m_audioThread;
+        m_audioThread = nullptr;
+    }
+
+    // [新增] 释放缓冲区
+    if (m_audioBuf) {
+        delete m_audioBuf;
+        m_audioBuf = nullptr;
     }
 
     // 关闭 Socket
@@ -88,6 +104,7 @@ void Sound_NetSpeaker_V2::TTSPlay(const char* text)
 
 void Sound_NetSpeaker_V2::SetMic(bool isOpen) 
 {
+    m_isMicOpen = isOpen;
     // 喊话模式需要切换 model
     if (isOpen) {
         // 切换到 mic_broadcast 模式
@@ -103,7 +120,9 @@ void Sound_NetSpeaker_V2::SetMic(bool isOpen)
 
 void Sound_NetSpeaker_V2::SetVolume(u8 vol)
 {
-
+    char param[64];
+    snprintf(param, sizeof(param), "\"vol\":\"%d\"", vol);
+    SendJsonCmd(BuildJson("set_vol", param)); 
 }
 
 void Sound_NetSpeaker_V2::GetVolume(u8 vol_play, u8 vol_cap)
@@ -188,6 +207,33 @@ void Sound_NetSpeaker_V2::OnCustomEvent(Event_Ptr& e)
     {
         SendJsonCmd(BuildJson("online"));
         // LOG_DEBUG("Heartbeat sent via main thread.");
+    }
+}
+
+void Sound_NetSpeaker_V2::PushAudio(const u8* data, u32 len)
+{
+    if (m_audioBuf) {
+        m_audioBuf->Write(data, len);
+    }
+}
+
+void Sound_NetSpeaker_V2::AudioTxLoop() {
+    u8 buf[1024]; // 每次发 1KB UDP 包
+    UdpSocket udpSock(m_ip, 9888); // 发送专用 socket
+
+    while (m_keepHeartbeat) {
+        if (!m_isMicOpen) {
+            msleep(100); 
+            continue; 
+        }
+
+        int len = m_audioBuf->Read(buf, 1024);
+        if (len > 0) {
+            udpSock.write(buf, len);
+        }
+        else {
+            msleep(10);
+        }
     }
 }
 

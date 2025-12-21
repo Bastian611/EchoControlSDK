@@ -72,7 +72,7 @@ target_include_directories(EchoControlSDK
 add_library(EchoControlSDK_shared SHARED
     ${ECHO_SDK_SOURCES}
     ${ECHO_SDK_HEADERS}
-)
+ )
 
 set_target_properties(EchoControlSDK_shared PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${ECCS_OUTPUT_ROOT}/bin"   # DLL
