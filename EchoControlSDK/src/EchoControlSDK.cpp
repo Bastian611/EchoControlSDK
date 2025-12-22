@@ -1,4 +1,5 @@
 ﻿#include "../include/EchoControlSDK.h"
+#include "../include/EchoControlCode.h"
 #include "Version.h"
 #include "config/ConfigManager.h"
 #include "device/DeviceBase.h"
@@ -9,34 +10,57 @@
 USING_ECCS
 
 // 默认配置文件路径
-static const char* DEFAULT_RULE_PATH = "./config/system_rules.sys";
-static const char* DEFAULT_DEV_PATH  = "./config/device_params.dev";
+static const char* DEFAULT_RULE_PATH = "./config/global.cfg";
+static const char* DEFAULT_DEV_PATH  = "./config/device.cfg";
 
 // --- 内部辅助 ---
 
 // 安全转换句柄
-static DeviceBase* SafeCast(ECCS_HANDLE hDev) {
+static ConfigManager* SafeCast(ECCS_HANDLE hDev) {
     if (hDev == ECCS_INVALID_HANDLE) return nullptr;
-    return static_cast<DeviceBase*>(hDev);
+    return static_cast<ConfigManager*>(hDev);
 }
 
-// 检查设备类型
-static bool CheckType(DeviceBase* dev, did::DeviceType type) {
+static DeviceBase* InternalFindDevice(ConfigManager* mgr, did::DeviceType type) 
+{
+    if (!mgr) return nullptr;
 
-    return dev && dev->GetDeviceID().GetDeviceType() == type;
+    // 遍历 ConfigManager 管理的所有设备
+    // 注意：ConfigManager 需要提供遍历接口，或者我们利用 GetDeviceCount/GetDeviceByIndex
+    int count = mgr->GetDeviceCount();
+    for (int i = 0; i < count; ++i) {
+        DeviceBase* dev = mgr->GetDeviceByIndex(i);
+        if (!dev) continue;
+
+        // 获取设备的完整 ID
+        DeviceID id = dev->GetDeviceID();
+
+        // 1. 先匹配大类 (Light/Sound/PTZ)
+        if (id.GetDeviceType() != type) continue;
+
+        // 2. [进阶判断] 如果系统里有多个同类设备，在这里通过 Model 或 Slot 区分
+        // 例如：只控制 Slot 1 的灯，或者只控制 HL-525 型号的灯
+        // if (type == did::DEVICE_LIGHT && dev->GetSlotID() != 1) continue; 
+
+        // 目前策略：返回找到的第一个该类型的设备 (通常系统里每种主设备只有一个)
+        return dev;
+    }
+    return nullptr;
 }
 
 // 构造并发送包
 template <typename TPacket, typename TVal>
-void PostPkt(DeviceBase* dev, const TVal& val) {
-    // 1. 创建智能指针
-    // std::make_shared 会尝试寻找 TPacket(const TVal&) 的构造函数
-    // 这对于 struct、bool、u8 等类型都适用
-    auto pkt = std::make_shared<TPacket>(val);
+ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val)
+{
+    ConfigManager* mgr = SafeCast(hDev);
+    DeviceBase* dev = InternalFindDevice(mgr, type);
 
-    // 2. 发送
-    // 这里利用了多态：shared_ptr<TPacket> -> shared_ptr<RpcPacket>
+    if (!dev) return ECCS_ERR_DEV_NOT_FOUND; // 找不到对应的硬件模块
+    
+    auto pkt = std::make_shared<TPacket>(val);
     dev->ExecutePacket(pkt);
+
+    return ECCS_SUCCESS;
 }
 
 // --- 接口实现 ---
@@ -56,7 +80,7 @@ extern "C" {
         	return ECCS_SUCCESS;
         }
         catch (...) {
-            ECCS_FAILURE;
+            ECCS_ERR_CFG_LOAD_FAILED;
         }
     }
 
@@ -65,235 +89,133 @@ extern "C" {
         ConfigManager::getInstance()->Release();
     }
 
-    // 获取设备数量
-    ECCS_API int ECCS_GetDeviceCount() 
-    {
-        return ConfigManager::getInstance()->GetDeviceCount();
-    }
-
-    // 通过索引获取句柄
-    ECCS_API ECCS_HANDLE ECCS_GetDeviceByIndex(int index) 
-    {
-        // 需要在 ConfigManager 中实现 GetDeviceByIndex
-        DeviceBase* dev = ConfigManager::getInstance()->GetDeviceByIndex(index);
-        return (ECCS_HANDLE)dev;
-    }
-
-    // 获取设备类型
-    ECCS_API int ECCS_GetDeviceType(ECCS_HANDLE hDev) 
-    {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!dev) return ECCS_DEV_UNKNOWN;
-        return (int)dev->GetDeviceID().GetDeviceType();
+    ECCS_API ECCS_HANDLE ECCS_GetSystemHandle() {
+        // 返回 ConfigManager 单例作为系统句柄
+        return (ECCS_HANDLE)ConfigManager::getInstance();
     }
 
     ECCS_API ECCS_Error ECCS_RegisterCallback(ECCS_HANDLE hDev, ECCS_CallbackFunc cb, void* userCtx) 
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!dev) return ECCS_NOT_INITIALIZED;
+        ConfigManager* mgr = SafeCast(hDev);
+        if (!mgr) return ECCS_ERR_NOT_INIT;
 
-        // 设置 C++ 回调，并在内部转调 C 函数指针
-        dev->SetStatusCallback([cb, userCtx, hDev](std::shared_ptr<rpc::RpcPacket> pkt) {
+        // 定义 lambda 转换层
+        auto internalCb = [cb, userCtx, hDev](std::shared_ptr<rpc::RpcPacket> pkt) {
             if (!cb || !pkt) return;
-
             u32 id = pkt->GetID();
 
-            // 1. 状态变更 (OwDeviceStatus)
             if (id == rpc::OwDeviceStatus::_FACTORY_ID_) {
                 auto p = std::dynamic_pointer_cast<rpc::OwDeviceStatus>(pkt);
-                if (p) {
-                    cb(hDev, ECCS_EVT_STATUS_CHANGE, &p->data, sizeof(p->data), userCtx);
-                }
+                if (p) cb(hDev, ECCS_EVT_STATUS_CHANGE, &p->data, sizeof(p->data), userCtx);
             }
-            // 2. 云台角度 (OwPtzPosition)
             else if (id == rpc::OwPtzPosition::_FACTORY_ID_) {
                 auto p = std::dynamic_pointer_cast<rpc::OwPtzPosition>(pkt);
-                if (p) {
-                    cb(hDev, ECCS_EVT_PTZ_REPORT, &p->data, sizeof(p->data), userCtx);
-                }
+                if (p) cb(hDev, ECCS_EVT_PTZ_ANGLE, &p->data, sizeof(p->data), userCtx);
             }
-            // 3. 强声播放结束
             else if (id == rpc::OwSoundPlayEnd::_FACTORY_ID_) {
-                cb(hDev, ECCS_EVT_SOUND_END, nullptr, 0, userCtx);
+                cb(hDev, ECCS_EVT_SOUND_FINISH, nullptr, 0, userCtx);
             }
-            });
+        };
 
-        return ECCS_Error::ECCS_SUCCESS;
-    }
+        // 假设 ConfigManager 已经有了 SetGlobalCallback 遍历设置给所有设备
+        //mgr->SetGlobalCallback(internalCb);
 
-// [修改] 设置配置：通过句柄反查内部 SlotID，用户无感知
-    ECCS_API ECCS_Error ECCS_SetConfig(ECCS_HANDLE hDev, const char* key, const char* value) 
-    {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!dev) return ECCS_NOT_INITIALIZED;
-
-        // 1. 获取设备内部记录的 slotID
-        // 需要确保 DeviceBase.h 中有 public: int GetSlotID() const { return m_slotID; }
-        int internalSlot = dev->GetSlotID(); 
-    
-        // 2. 调用 ConfigManager 落盘
-        if (ConfigManager::getInstance()->UpdateConfig(internalSlot, key, value)) {
-            return ECCS_SUCCESS;
+        // 临时实现：手动遍历设置
+        int count = mgr->GetDeviceCount();
+        for (int i = 0; i < count; ++i) {
+            DeviceBase* dev = mgr->GetDeviceByIndex(i);
+            if (dev) dev->SetStatusCallback(internalCb);
         }
-        return ECCS_FAILURE; 
+
+        return ECCS_SUCCESS;
     }
 
-    ECCS_API ECCS_Error ECCS_GetConfig(ECCS_HANDLE hDev, const char* key, char* outBuf, int maxLen) 
-    {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!dev) return ECCS_NOT_INITIALIZED;
-    
-        str val = dev->GetProperty(key);
-        strncpy(outBuf, val.c_str(), maxLen - 1);
-        outBuf[maxLen - 1] = '\0';
-        return ECCS_SUCCESS;
+    ECCS_API bool ECCS_IsSystemOnline(ECCS_HANDLE hDev) {
+        ConfigManager* mgr = SafeCast(hDev);
+        if (!mgr) return false;
+        // 简单策略：所有设备都在线才算系统在线，或者只要有一个在线
+        // 这里示例：检查是否所有 Critical 设备在线
+        return true;
     }
 
     // --- Light ---
     ECCS_API ECCS_Error ECCS_Light_SetSwitch(ECCS_HANDLE hDev, int isOpen)
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_LIGHT)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
-        rpc::LightStatus data; // 注意：复用 LightStatus 或定义专用 Switch 结构
-        // 假设 PacketDef 定义的是 bool 类型：
-        // auto pkt = std::make_shared<rpc::RqLightSwitch>(isOpen != 0);
-        // 你的定义是: typedef Packet<..., bool> RqLightSwitch;
-
-        PostPkt<rpc::RqLightSwitch>(dev, (isOpen != 0));
-        return ECCS_Error::ECCS_SUCCESS;
+        return PostPkt<rpc::RqLightSwitch>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0));
     }
 
     ECCS_API ECCS_Error ECCS_Light_SetLevel(ECCS_HANDLE hDev, int level)
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_LIGHT)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
-        PostPkt<rpc::RqLightLevel>(dev, (u8)level);
-        return ECCS_Error::ECCS_SUCCESS;
+        return PostPkt<rpc::RqLightLevel>(hDev, did::DEVICE_LIGHT, (u8)level);
     }
 
     ECCS_API ECCS_Error ECCS_Light_SetStrobe(ECCS_HANDLE hDev, int isOpen)
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_LIGHT)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
-        PostPkt<rpc::RqLightStrobe>(dev, (isOpen != 0));
-        return ECCS_Error::ECCS_SUCCESS;
+        return PostPkt<rpc::RqLightStrobe>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0));
     }
 
     // --- PTZ ---
     ECCS_API ECCS_Error ECCS_PTZ_Move(ECCS_HANDLE hDev, int action, int speed) 
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_PTZ)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
-        rpc::PtzMotion data;
-        data.action = (u8)action;
-        data.speed = (u8)speed;
-        PostPkt<rpc::RqPtzMove>(dev, data);
-        return ECCS_Error::ECCS_SUCCESS;
+        rpc::PtzMotion data = { (u8)action, (u8)speed };
+        return PostPkt<rpc::RqPtzMove>(hDev, did::DEVICE_PTZ, data);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_Zoom(ECCS_HANDLE hDev, int isZoomIn)
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_PTZ)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
-        // 复用 Move 指令的 Action 定义，假设 6=ZoomIn, 7=ZoomOut
-        // 或者 PtzMotion 结构体不够，需要在 PacketDef.h 增加 RqPtzZoom
-        // 暂时用 PtzMove 占位
-        return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
+        // 暂不支持或需要扩展协议
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_Preset(ECCS_HANDLE hDev, int action, int index)
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_PTZ)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
-        rpc::PtzPreset data;
-        data.action = (u8)action;
-        data.index = (u8)index;
-        PostPkt<rpc::RqPtzPreset>(dev, data);
-        return ECCS_Error::ECCS_SUCCESS;
+        rpc::PtzPreset data = { (u8)action, (u8)index };
+        return PostPkt<rpc::RqPtzPreset>(hDev, did::DEVICE_PTZ, data);
     }
 
     // --- Sound ---
     ECCS_API ECCS_Error ECCS_Sound_Play(ECCS_HANDLE hDev, const char* filename, int loop) 
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_SOUND)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
         rpc::SoundPlayCtrl data;
         strncpy(data.filename, filename, sizeof(data.filename) - 1);
         data.loop = (u8)loop;
-        PostPkt<rpc::RqSoundPlay>(dev, data);
-        return ECCS_Error::ECCS_SUCCESS;
+        return PostPkt<rpc::RqSoundPlay>(hDev, did::DEVICE_SOUND, data);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_Stop(ECCS_HANDLE hDev) 
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_SOUND)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
-        rpc::NoneData data;
-        PostPkt<rpc::RqSoundStop>(dev, data);
-        return ECCS_Error::ECCS_SUCCESS;
+        return PostPkt<rpc::RqSoundStop>(hDev, did::DEVICE_SOUND, rpc::NoneData());
     }
 
     ECCS_API ECCS_Error ECCS_Sound_SetVolume(ECCS_HANDLE hDev, int volume) 
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_SOUND)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
-        rpc::SoundVolCtrl data;
-        data.volume = (u8)volume;
-        // 假设 PacketDef 中有 RqSoundVol
-        // PostPkt<rpc::RqSoundVol>(dev, data); 
-        return ECCS_Error::ECCS_SUCCESS;
+        rpc::SoundVolCtrl data = { (u8)volume };
+        // 确保 PacketDef.h 中有 RqSoundSetVolume
+        return PostPkt<rpc::RqSetSoundVolume>(hDev, did::DEVICE_SOUND, data);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_TTS(ECCS_HANDLE hDev, const char* text) 
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_SOUND)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
         rpc::SoundTTSCtrl data;
         strncpy(data.text, text, sizeof(data.text) - 1);
-        PostPkt<rpc::RqSoundTTS>(dev, data);
-        return ECCS_Error::ECCS_SUCCESS;
+        return PostPkt<rpc::RqSoundTTS>(hDev, did::DEVICE_SOUND, data);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen) 
     {
-        DeviceBase* dev = SafeCast(hDev);
-        if (!CheckType(dev, did::DEVICE_SOUND)) return ECCS_Error::ECCS_UNSUPPORTED_OPERATION;
-
-        bool data = (isOpen != 0);
-        PostPkt<rpc::RqSoundMic>(dev, data);
-        return ECCS_Error::ECCS_SUCCESS;
+        return PostPkt<rpc::RqSoundMic>(hDev, did::DEVICE_SOUND, (bool)(isOpen != 0));
     }
 
-    ECCS_API ECCS_Error ECS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len) {
-        if (!data || len <= 0) return ECCS_FAILURE;
-
-        DeviceBase* dev = SafeCast(hDev);
-
-        // 类型检查
-        if (!CheckType(dev, did::DEVICE_SOUND)) {
-            return ECCS_UNSUPPORTED_OPERATION;
-        }
+    ECCS_API ECCS_Error ECCS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len) {
+        ConfigManager* mgr = SafeCast(hDev);
+        DeviceBase* dev = InternalFindDevice(mgr, did::DEVICE_SOUND);
 
         auto soundDev = dynamic_cast<ISound_Device*>(dev);
-
         if (soundDev) {
-            // 直接调用内部 RingBuffer 的 Write
-            // 因为 RingBuffer 有 mutex 锁，所以这里是线程安全的
             soundDev->PushAudio((const u8*)data, (u32)len);
             return ECCS_SUCCESS;
         }
-
-        return ECCS_FAILURE;
+        return ECCS_ERR_DEV_NOT_FOUND;
     }
 
 }

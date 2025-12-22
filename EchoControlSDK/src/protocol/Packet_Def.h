@@ -64,7 +64,7 @@ namespace rpc {
     // =============================================================
 
     // #############################################################
-    // 1. CONTROL (实时控制)
+    // CONTROL (实时控制)
     // #############################################################
 
     // --- Light Control ---
@@ -105,7 +105,7 @@ namespace rpc {
 
 
     // #############################################################
-    // 2. QUERY (状态查询 - 主动轮询用)
+    // QUERY (状态查询 - 主动轮询用)
     // #############################################################
 
     // --- Light Query ---
@@ -116,22 +116,35 @@ namespace rpc {
     typedef Packet<_APP_RQ_QUERY_ID_(DEVICE_PTZ, 1), NoneData>        RqQueryPtzPos;
     typedef Packet<_APP_RP_QUERY_ID_(DEVICE_PTZ, 1), PtzPosition>     RpQueryPtzPos;
 
+    // --- Sound Query ---
+
 
     // #############################################################
-    // 3. SETTING (参数配置)
+    // SETTING (参数配置)
     // #############################################################
 
     // 通用：修改网络配置
-    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_UNKNOWN, 1), NetConfig>  RqSetNetConfig;
-    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_UNKNOWN, 1), Result> RpSetNetConfig;
+    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_UNKNOWN, 1), NetConfig>   RqSetNetConfig;
+    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_UNKNOWN, 1), Result>      RpSetNetConfig;
 
     // 通用：修改设备名称
-    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_UNKNOWN, 2), DevName>    RqSetDevName;
-    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_UNKNOWN, 2), Result> RpSetDevName;
+    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_UNKNOWN, 2), DevName>     RqSetDevName;
+    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_UNKNOWN, 2), Result>      RpSetDevName;
+
+    // --- Light Setting ---
+
+
+    // --- Sound Setting ---
+
+    // 音量设置
+    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_SOUND, 1), SoundVolCtrl>  RqSetSoundVolume;
+    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_SOUND, 1), Result>        RpSetSoundVolume;
+
+    // --- PTZ Setting ---
 
 
     // #############################################################
-    // 4. ONEWAY (服务端主动推送)
+    // ONEWAY (服务端主动推送)
     // #############################################################
 
     // 强光状态变更推送

@@ -2,6 +2,7 @@
 #include "../global.h"
 #include "../utils/singleton.hpp"
 #include "../utils/configparser.h"
+#include "../protocol/RpcPacket.h"
 #include <map>
 #include <vector>
 
@@ -45,8 +46,13 @@ public:
     // 按索引获取 (线性扫描 map，虽然效率低但对于几十个设备无所谓，且保证顺序稳定)
     DeviceBase* GetDeviceByIndex(int index);
 
+    // 设置全局回调给所有设备
+    void SetGlobalCallback(std::function<void(std::shared_ptr<rpc::RpcPacket>)> cb);
+
 private:
     int ParseSlotID(const str& sectionName);
+
+private:
     // 保存参数文件路径，用于回写
     str m_paramPath;
 

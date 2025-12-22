@@ -17,7 +17,7 @@ extern "C" {
 #endif
 
     // =======================================================
-    // 1. 基础类型与回调定义
+    // 基础类型与回调定义
     // =======================================================
 
     // 设备句柄
@@ -32,10 +32,10 @@ extern "C" {
      * @param len  数据长度
      * @param userCtx 用户注册时传入的上下文指针
      */
-    typedef void (*ECCS_CallbackFunc)(ECCS_HANDLE hDev, int type, const void* data, int len, void* userCtx);
+    typedef void (*ECCS_CallbackFunc)(ECCS_HANDLE hDev, ECCS_EventType type, const void* data, int len, void* userCtx);
 
     // =======================================================
-    // 2. 系统管理接口
+    // 系统管理接口
     // =======================================================
 
     /**
@@ -50,55 +50,30 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Init();
 
     /**
+     * @brief 获取系统句柄
+     * @note 必须在 Init 成功后调用。
+     */
+    ECCS_API ECCS_HANDLE ECCS_GetHandle();
+
+    /**
      * @brief 释放 SDK 资源 (停止所有线程，关闭网络)
      */
     ECCS_API void ECCS_Release();
 
     // =======================================================
-    // 3. 设备发现与遍历 (替代 SlotID)
-    // =======================================================
-
-    /**
-     * @brief 获取系统中已加载的设备数量
-     */
-    ECCS_API int ECCS_GetDeviceCount();
-
-    /**
-     * @brief 通过索引获取设备句柄
-     * @param index 索引范围 0 到 Count-1
-     */
-    ECCS_API ECCS_HANDLE ECCS_GetDeviceByIndex(int index);
-
-    /**
-     * @brief 获取设备类型
-     * @return ECCS_DevType 枚举值
-     */
-    ECCS_API int ECCS_GetDeviceType(ECCS_HANDLE hDev);
-
-    // =======================================================
-    // 3. 通用设备功能
+    // 通用设备功能
     // =======================================================
 /**
      * @brief 注册状态/数据回调
      * @param userCtx 用户自定义指针，回调时原样传回
      */
     ECCS_API ECCS_Error ECCS_RegisterCallback(ECCS_HANDLE hDev, ECCS_CallbackFunc cb, void* userCtx);
+    
+    // 检查设备是否在线
     ECCS_API bool ECCS_IsOnline(ECCS_HANDLE hDev);
 
-    /**
-     * @brief 修改并保存设备属性 (持久化)
-     * @param key 属性名 (如 "DefaultVolume", "Name", "IP")
-     * @param value 属性值
-     */
-    ECCS_API ECCS_Error ECCS_SetConfig(ECCS_HANDLE hDev, const char* key, const char* value);
-
-    /**
-     * @brief 获取设备属性 (内存值)
-     */
-    ECCS_API ECCS_Error ECCS_GetConfig(ECCS_HANDLE hDev, const char* key, char* outBuf, int maxLen);
-
     // =======================================================
-    // 4. 强光控制 (Light)
+    // 强光控制
     // =======================================================
 
     // 开关: 1=Open, 0=Close
@@ -111,7 +86,7 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Light_SetStrobe(ECCS_HANDLE hDev, int isOpen);
 
     // =======================================================
-    // 5. 云台控制 (PTZ)
+    // 云台控制
     // =======================================================
 
     // 移动: action(1=Up, 2=Down, 3=Left, 4=Right, 5=Stop)
@@ -125,7 +100,7 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_PTZ_Preset(ECCS_HANDLE hDev, int action, int index);
 
     // =======================================================
-    // 6. 强声控制 (Sound)
+    // 强声控制
     // =======================================================
 
     // 播放: filename(文件名或索引), loop(1=循环)
@@ -147,7 +122,7 @@ extern "C" {
      * @param len  数据长度
      * @return ECCS_RET_SUCCESS 成功, ECCS_DEVICE_BUSY 缓冲区满(丢弃)
      */
-    ECCS_API ECCS_Error ECS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len);
+    ECCS_API ECCS_Error ECCS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len);
 
 #ifdef __cplusplus
 }

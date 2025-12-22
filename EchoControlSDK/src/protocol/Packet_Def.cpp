@@ -12,7 +12,7 @@ namespace rpc {
     FACTORY_BEGIN(u32, RpcPacket)
 
         // #############################################################
-        // 1. CONTROL (实时控制)
+        // CONTROL (实时控制)
         // #############################################################
 
         // --- Light Control ---
@@ -43,12 +43,15 @@ namespace rpc {
 
 
         // #############################################################
-        // 2. QUERY (状态查询)
+        // QUERY (状态查询)
         // #############################################################
 
         // --- Light ---
         FACTORY_ID_APPEND(RqQueryLightStatus, RpcPacket)
         FACTORY_ID_APPEND(RpQueryLightStatus, RpcPacket)
+
+        // --- Sound ---
+
 
         // --- PTZ ---
         FACTORY_ID_APPEND(RqQueryPtzPos, RpcPacket)
@@ -56,7 +59,7 @@ namespace rpc {
 
 
         // #############################################################
-        // 3. SETTING (参数配置)
+        // SETTING (参数配置)
         // #############################################################
 
         // 通用网络配置
@@ -67,9 +70,19 @@ namespace rpc {
         FACTORY_ID_APPEND(RqSetDevName, RpcPacket)
         FACTORY_ID_APPEND(RpSetDevName, RpcPacket)
 
+        // --- Light ---
+
+
+        // --- Sound ---
+        FACTORY_ID_APPEND(RqSetSoundVolume, RpcPacket)
+        FACTORY_ID_APPEND(RpSetSoundVolume, RpcPacket)
+        
+
+        // --- PTZ ---
+
 
         // #############################################################
-        // 4. ONEWAY (服务端主动推送)
+        // ONEWAY (服务端主动推送)
         // #############################################################
 
         FACTORY_ID_APPEND(OwLightStatus, RpcPacket)

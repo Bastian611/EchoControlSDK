@@ -62,7 +62,7 @@ enum ECCS_EventType {
 // -----------------------------------------------------------
 inline const char* ECCS_GetErrorStr(ECCS_Error code) {
     switch (code) {
-    case ECCS_RET_SUCCESS:               return "Success";
+    case ECCS_SUCCESS:               return "Success";
 
         // General
     case ECCS_ERR_FAILED:            return "General Failure";

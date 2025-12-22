@@ -175,4 +175,14 @@ bool ConfigManager::UpdateConfig(int slotID, const str& key, const str& value) {
     return false;
 }
 
+void ConfigManager::SetGlobalCallback(std::function<void(std::shared_ptr<rpc::RpcPacket>)> cb) 
+{
+    for (auto& pair : m_devices) {
+        if (pair.second) {
+            pair.second->SetStatusCallback(cb);
+        }
+    }
+    // TODO: 如果设备是后续动态添加的，也需要存下 cb 并赋值
+}
+
 ECCS_END
