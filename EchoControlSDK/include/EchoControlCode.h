@@ -43,7 +43,7 @@ enum ECCS_DevType {
     ECCS_DEV_LIGHT = 1, // 强光
     ECCS_DEV_SOUND = 2, // 强声
     ECCS_DEV_PTZ = 3, // 云台
-    ECCS_DEV_RELAY = 4, // 继电器
+    ECCS_DEV_ULTRASONIC = 4, // 超声
     ECCS_DEV_CAMERA = 5  // 摄像头
 };
 

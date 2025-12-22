@@ -18,7 +18,7 @@ namespace did {
         DEVICE_LIGHT = 1,
         DEVICE_SOUND = 2,
         DEVICE_PTZ = 3,
-        DEVICE_RELAY = 4,
+        DEVICE_ULTRASONIC = 4,
         DEVICE_CAMERA = 5
         /* MaxValue: 0xFF */
     };
@@ -45,10 +45,10 @@ namespace did {
         PTZ_YZ_BY010W = 1
     };
 
-    enum RelayModel
+    enum UltrasonicModel
     {
-        RELAY_UNKNOWN = 0,
-        RELAY_TAS_IO_428R2 = 1
+        ULTRASONIC_UNKNOWN = 0,
+        ULTRASONIC_TAS_IO_428R2 = 1
     };
 
     enum CameraModel
@@ -62,7 +62,7 @@ namespace did {
     const char* LightModelStr(LightModel model);
     const char* SoundModelStr(SoundModel model);
     const char* PTZModelStr(PTZModel model);
-    const char* RelayModelStr(RelayModel model);
+    const char* UltrasonicModelStr(UltrasonicModel model);
     const char* CameraModelStr(CameraModel model);
 }
 
@@ -154,12 +154,12 @@ public:
     }
 
     // --- 类型判断助手 ---
-    bool IsLight()  const { return GetDeviceType() == did::DEVICE_LIGHT; }
-    bool IsSound()  const { return GetDeviceType() == did::DEVICE_SOUND; }
-    bool IsPTZ()    const { return GetDeviceType() == did::DEVICE_PTZ; }
-    bool IsRelay()  const { return GetDeviceType() == did::DEVICE_RELAY; }
-    bool IsCamera() const { return GetDeviceType() == did::DEVICE_CAMERA; }
-    bool IsValid()  const { return m_id != 0; }
+    bool IsLight()          const { return GetDeviceType() == did::DEVICE_LIGHT; }
+    bool IsSound()          const { return GetDeviceType() == did::DEVICE_SOUND; }
+    bool IsPTZ()            const { return GetDeviceType() == did::DEVICE_PTZ; }
+    bool IsUltrasonic()     const { return GetDeviceType() == did::DEVICE_ULTRASONIC; }
+    bool IsCamera()         const { return GetDeviceType() == did::DEVICE_CAMERA; }
+    bool IsValid()          const { return m_id != 0; }
 
     // 检查是否同型号 (忽略Index)
     bool IsSameModel(const DeviceID& other) const {

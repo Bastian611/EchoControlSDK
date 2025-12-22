@@ -56,6 +56,12 @@ namespace rpc {
     struct NetConfig { char ip[32]; u16 port; };
     struct DevName { char name[64]; };
 
+    // ---------------- Ultrasonic Data ----------------
+    struct UltrasonicSwitch {
+        u8 channel; // 0=All, 1=Channel1...
+        u8 isOpen;
+    };
+
 #pragma pack(pop)
 
 
@@ -97,11 +103,15 @@ namespace rpc {
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 1), PtzMotion> RqPtzMove;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 1), Result>    RpPtzMove;
     // Õ£÷π
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 2), NoneData>      RqPtzStop;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 2), NoneData>  RqPtzStop;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 2), Result>    RpPtzStop;
     // ‘§÷√Œª
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 3), PtzPreset>     RqPtzPreset;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 3), Result>    RpPtzPreset;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 3), PtzPreset>   RqPtzPreset;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 3), Result>      RpPtzPreset;
+
+    // ºÃµÁ∆˜øÿ÷∆
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_ULTRASONIC, 1), UltrasonicSwitch>  RqUltrasonicSwitch;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_ULTRASONIC, 1), Result>            RpUltrasonicSwitch;
 
 
     // #############################################################

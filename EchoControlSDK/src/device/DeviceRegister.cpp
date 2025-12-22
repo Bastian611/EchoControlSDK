@@ -6,6 +6,7 @@
 #include "Light/Light_HL_525_4W/Light_HL_525_4W.h"
 #include "PTZ/PTZ_YZ_BY010W/PTZ_YZ_BY010W.h"
 #include "Sound/Sound_NetSpeaker_V2/Sound_NetSpeaker_V2.h"
+#include "Ultrasonic/Ultrasonic_TAS_IO_428R2/Ultrasonic_TAS_IO_428R2.h"
 
 #include <map>
 
@@ -47,9 +48,16 @@ u32 GetDeviceOIDByModelName(const str& modelName) {
 FACTORY_BEGIN(u32, DeviceBase)
 
 // 使用具体类的 ID 常量进行注册
-FACTORY_APPEND(Light_HL_525_4W::ID,         Light_HL_525_4W,        DeviceBase)
-FACTORY_APPEND(PTZ_YZ_BY010W::ID,           PTZ_YZ_BY010W,          DeviceBase)
-FACTORY_APPEND(Sound_NetSpeaker_V2::ID,     Sound_NetSpeaker_V2,    DeviceBase)
+FACTORY_APPEND(Light_HL_525_4W::ID,         Light_HL_525_4W,            DeviceBase)
+
+
+FACTORY_APPEND(PTZ_YZ_BY010W::ID,           PTZ_YZ_BY010W,              DeviceBase)
+
+
+FACTORY_APPEND(Sound_NetSpeaker_V2::ID,     Sound_NetSpeaker_V2,        DeviceBase)
+
+
+FACTORY_APPEND(Ultrasonic_TAS_IO_428R2::ID, Ultrasonic_TAS_IO_428R2,    DeviceBase)
 
 FACTORY_END(u32, DeviceBase)
 

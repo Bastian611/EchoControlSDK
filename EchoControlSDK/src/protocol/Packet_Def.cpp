@@ -41,6 +41,10 @@ namespace rpc {
         FACTORY_ID_APPEND(RqPtzPreset, RpcPacket)
         FACTORY_ID_APPEND(RpPtzPreset, RpcPacket)
 
+        // --- Ultrasonic Control ---
+        FACTORY_ID_APPEND(RqUltrasonicSwitch, RpcPacket)
+        FACTORY_ID_APPEND(RpUltrasonicSwitch, RpcPacket)
+
 
         // #############################################################
         // QUERY (×´Ì¬²éÑ¯)

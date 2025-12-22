@@ -8,12 +8,12 @@ namespace did {
     const char* DeviceTypeStr(DeviceType type) 
     {
         switch (type) {
-        case DEVICE_LIGHT:  return "Light";
-        case DEVICE_SOUND:  return "Sound";
-        case DEVICE_PTZ:    return "PTZ";
-        case DEVICE_RELAY:  return "Relay";
-        case DEVICE_CAMERA: return "Camera";
-        default:            return "Unknown";
+        case DEVICE_LIGHT:          return "Light";
+        case DEVICE_SOUND:          return "Sound";
+        case DEVICE_PTZ:            return "PTZ";
+        case DEVICE_ULTRASONIC:     return "Ultrasonic";
+        case DEVICE_CAMERA:         return "Camera";
+        default:                    return "Unknown";
         }
     }
 
@@ -42,12 +42,12 @@ namespace did {
         }
     }
 
-    const char* RelayModelStr(RelayModel model)
+    const char* UltrasonicModelStr(UltrasonicModel model)
     {
         switch (model)
         {
-        case RELAY_TAS_IO_428R2:    return "RELAY-TAS-IO-428R2";
-        default:                    return "Unknown-Relay";
+        case ULTRASONIC_TAS_IO_428R2:       return "Ultrasonic-TAS-IO-428R2";
+        default:                            return "Unknown-Ultrasonic";
         }
     }
     const char* CameraModelStr(CameraModel model)
@@ -80,12 +80,24 @@ str DeviceID::ToString() const {
     str modelStr;
 
     switch (type) {
-    case did::DEVICE_LIGHT:     modelStr = did::LightModelStr((did::LightModel)model);      break;
-    case did::DEVICE_SOUND:     modelStr = did::SoundModelStr((did::SoundModel)model);      break;
-    case did::DEVICE_PTZ:       modelStr = did::PTZModelStr((did::PTZModel)model);          break;
-    case did::DEVICE_RELAY:     modelStr = did::RelayModelStr((did::RelayModel)model);      break;
-    case did::DEVICE_CAMERA:    modelStr = did::CameraModelStr((did::CameraModel)model);    break;
-    default:                    modelStr = "UnknownModel";                                  break;
+    case did::DEVICE_LIGHT:         
+        modelStr = did::LightModelStr((did::LightModel)model);      
+        break;
+    case did::DEVICE_SOUND:         
+        modelStr = did::SoundModelStr((did::SoundModel)model);      
+        break;
+    case did::DEVICE_PTZ:           
+        modelStr = did::PTZModelStr((did::PTZModel)model);          
+        break;
+    case did::DEVICE_ULTRASONIC:    
+        modelStr = did::UltrasonicModelStr((did::UltrasonicModel)model);      
+        break;
+    case did::DEVICE_CAMERA:        
+        modelStr = did::CameraModelStr((did::CameraModel)model);    
+        break;
+    default:                        
+        modelStr = "UnknownModel";                                  
+        break;
     }
 
     char buf[128] = { 0 };

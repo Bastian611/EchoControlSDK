@@ -6,6 +6,7 @@
 #include "device/Light/ILight_Device.h"
 #include "device/PTZ/IPTZ_Device.h"
 #include "device/Sound/ISound_Device.h"
+#include "device/Ultrasonic/IUltrasonic_Device.h"
 
 ECCS_BEGIN
 
@@ -114,14 +115,26 @@ EchoControlHandler::EchoControlHandler() {
         sound->SetMic(req->data); // bool
         });
 
-    // 设置音量 (假设 PacketDef.h 中有定义 RqSoundVol，若没定义这里需注释掉或补全)
-    /*
-    Register<rpc::RqSoundVol>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+    // 设置音量
+    Register<rpc::RqSetSoundVolume>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
-        CAST_PKT(rpc::RqSoundVol, req);
+        CAST_PKT(rpc::RqSetSoundVolume, req);
         sound->SetVolume(req->data.volume);
     });
-    */
+
+    // =======================================================
+    // 4. 超声设备 (Ultrasonic)
+    // =======================================================
+
+    // 开关控制
+    Register<rpc::RqUltrasonicSwitch>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(IUltrasonic_Device, ultrasonic);
+        CAST_PKT(rpc::RqUltrasonicSwitch, req);
+
+        // req->data.channel: 1, 2, 3...
+        // req->data.isOpen: 0, 1
+        ultrasonic->SetSwitch(req->data.channel, (req->data.isOpen != 0));
+    });
 }
 
 // -----------------------------------------------------------

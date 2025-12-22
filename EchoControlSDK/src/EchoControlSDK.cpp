@@ -1,5 +1,6 @@
 ﻿#include "../include/EchoControlSDK.h"
 #include "../include/EchoControlCode.h"
+#include "debug/Logger.h"
 #include "Version.h"
 #include "config/ConfigManager.h"
 #include "device/DeviceBase.h"
@@ -35,10 +36,10 @@ static DeviceBase* InternalFindDevice(ConfigManager* mgr, did::DeviceType type)
         // 获取设备的完整 ID
         DeviceID id = dev->GetDeviceID();
 
-        // 1. 先匹配大类 (Light/Sound/PTZ)
+        // 先匹配大类 (Light/Sound/PTZ)
         if (id.GetDeviceType() != type) continue;
 
-        // 2. [进阶判断] 如果系统里有多个同类设备，在这里通过 Model 或 Slot 区分
+        // [进阶判断] 如果系统里有多个同类设备，在这里通过 Model 或 Slot 区分
         // 例如：只控制 Slot 1 的灯，或者只控制 HL-525 型号的灯
         // if (type == did::DEVICE_LIGHT && dev->GetSlotID() != 1) continue; 
 
@@ -80,7 +81,8 @@ extern "C" {
         	return ECCS_SUCCESS;
         }
         catch (...) {
-            ECCS_ERR_CFG_LOAD_FAILED;
+            LOG_ERROR("Init Failed: %s", ECCS_GetErrorStr(ECCS_ERR_CFG_LOAD_FAILED))
+            return ECCS_ERR_CFG_LOAD_FAILED;
         }
     }
 
@@ -89,7 +91,7 @@ extern "C" {
         ConfigManager::getInstance()->Release();
     }
 
-    ECCS_API ECCS_HANDLE ECCS_GetSystemHandle() {
+    ECCS_API ECCS_HANDLE ECCS_GetHandle() {
         // 返回 ConfigManager 单例作为系统句柄
         return (ECCS_HANDLE)ConfigManager::getInstance();
     }
@@ -198,6 +200,7 @@ extern "C" {
     {
         rpc::SoundTTSCtrl data;
         strncpy(data.text, text, sizeof(data.text) - 1);
+        data.text[sizeof(data.text) - 1] = '\0'; // 确保字符串以 null 结尾
         return PostPkt<rpc::RqSoundTTS>(hDev, did::DEVICE_SOUND, data);
     }
 
@@ -216,6 +219,14 @@ extern "C" {
             return ECCS_SUCCESS;
         }
         return ECCS_ERR_DEV_NOT_FOUND;
+    }
+
+    ECCS_API ECCS_Error ECCS_Ultrasonic_SetSwitch(ECCS_HANDLE hSystem, int channel, int isOpen)
+    {
+        rpc::UltrasonicSwitch data;
+        data.channel = (u8)channel;
+        data.isOpen = (u8)(isOpen != 0);
+        return PostPkt<rpc::RqUltrasonicSwitch>(hSystem, did::DEVICE_ULTRASONIC, data);
     }
 
 }

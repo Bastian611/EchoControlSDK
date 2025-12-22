@@ -124,6 +124,18 @@ extern "C" {
      */
     ECCS_API ECCS_Error ECCS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len);
 
+    // =======================================================
+    // 超声控制
+    // =======================================================
+
+    /**
+     * @brief 超声波开关控制
+     * @param hSystem 系统句柄
+     * @param channel 通道号 (1=通道1, 2=通道2..., 0=所有)
+     * @param isOpen  1=开启, 0=关闭
+     */
+    ECCS_API ECCS_Error ECCS_Ultrasonic_SetSwitch(ECCS_HANDLE hSystem, int channel, int isOpen);
+
 #ifdef __cplusplus
 }
 #endif
