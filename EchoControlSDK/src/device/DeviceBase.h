@@ -96,6 +96,8 @@ protected:
     // [状态] 切换状态并推送
     void SetState(DevState newState, int errCode = 0);
 
+    DevState GetState() const { return m_devState; }
+
     // ------------------------------------------------
     // 子类虚函数钩子 (Hooks)
     // ------------------------------------------------
@@ -113,12 +115,19 @@ protected:
     void StartReader();
     void StopReader();
 
+    bool IsValidStateTransition(DevState from, DevState to) const;
+
+    bool IsStateOnline(DevState state) const;
+
     // 原始数据接收钩子
     virtual void OnRawDataReceived(const u8* data, u32 len);
 
     // 底层读取接口 (子类必须实现，因为TCP/UDP/串口读取方式不同)
     // 返回读取的字节数，<=0 表示错误或超时
     virtual int ReadRaw(u8* buf, u32 maxLen) { return 0; }
+
+    virtual void OnStateEnter(DevState state);
+    virtual void OnStateExit(DevState state);
 
 private:
     // 读取线程函数
@@ -134,6 +143,7 @@ protected:
     DeviceID m_deviceID;
     DevState m_devState;
     StatusCallback m_statusCb;
+    std::atomic<bool> m_shuttingDown{ false };
 
     // 内置属性存储
     std::map<str, PropMeta> m_propMeta;   // 定义

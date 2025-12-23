@@ -5,7 +5,7 @@
 ECCS_BEGIN
 
 DeviceBase::DeviceBase()
-    : Thread(), m_slotID(0), m_devState(STATE_OFFLINE)
+    : Thread(), m_slotID(0), m_devState(STATE_UNKNOWN)
 {
 }
 
@@ -46,6 +46,9 @@ bool DeviceBase::Init(int slotID, const std::map<str, str>& config) {
         return false;
     }
 
+    m_shuttingDown = false;
+    SetState(STATE_INITIALIZED);
+
     return true;
 }
 
@@ -57,7 +60,10 @@ bool DeviceBase::Start() {
 }
 
 void DeviceBase::Stop() {
-    if (m_state != TS_RUNNING && m_thread == nullptr) return;
+    if (m_state != TS_RUNNING && m_thread == nullptr) 
+        return;
+
+    m_shuttingDown = true;
 
     Thread::quit();
     Thread::join();
@@ -83,7 +89,7 @@ str DeviceBase::GetProperty(const str& key) const {
 }
 
 bool DeviceBase::IsOnline() const {
-    return m_devState == STATE_ONLINE || m_devState == STATE_WORKING;
+    return IsStateOnline(m_devState);
 }
 
 DeviceID DeviceBase::GetDeviceID() const {
@@ -94,12 +100,44 @@ void DeviceBase::SetStatusCallback(StatusCallback cb) {
     m_statusCb = cb;
 }
 
-void DeviceBase::SetState(DevState newState, int errCode) {
-    if (m_devState == newState) return;
-    m_devState = newState;
-
+void DeviceBase::SetState(DevState newState, int errCode) 
+{
+    // 设备正在关闭，只允许进入 OFFLINE
+    if (m_shuttingDown && newState != STATE_OFFLINE)
+    {
+        LOG_WARNING("Reject state change during shutdown: {%s} -> {%s}",
+            DevStateToStr(m_devState),
+            DevStateToStr(newState));
+        return;
+    }
     // 构造状态包
     rpc::DeviceStatus status;
+    if (!IsValidStateTransition(m_devState, newState))
+    {
+        LOG_ERROR("Invalid state transition: {%s} -> {%s}",
+            DevStateToStr(m_devState),
+            DevStateToStr(newState));
+
+        // 发送一次“状态未变，但有错误”的通知
+        status.deviceID = m_deviceID.Value();
+        status.slotID = (u8)m_slotID;
+        status.state = (u8)newState; // enum -> u8
+        status.errorCode = (u32)errCode;
+        status.temperature = 0.0f; // 可扩展：从属性获取
+
+        // 推送 OW 包
+        auto pkt = std::make_shared<rpc::OwDeviceStatus>(status);
+        if (m_statusCb) m_statusCb(pkt);
+
+        return ;
+    }
+
+    if (m_devState == newState) return;
+
+    OnStateExit(m_devState);
+    m_devState = newState;
+    OnStateEnter(m_devState);
+
     status.deviceID = m_deviceID.Value();
     status.slotID = (u8)m_slotID;
     status.state = (u8)newState; // enum -> u8
@@ -123,10 +161,21 @@ void DeviceBase::run() {
         // Packet 事件
         if (e->eId() == DeviceEventID::PacketArrival) {
             auto pe = std::dynamic_pointer_cast<PacketEvent>(e);
-            if (pe && pe->GetPacket()) {
-                // 调用单例 Handler 进行分发
-                EchoControlHandler::Instance().Dispatch(this, pe->GetPacket());
+            if (!pe && !pe->GetPacket())
+                continue;
+
+            // 状态拦截
+            if (!IsStateOnline(m_devState)) {
+                LOG_WARNING(
+                    "[Slot %d] Packet rejected in state: %s",
+                    m_slotID,
+                    DevStateToStr(m_devState)
+                );
+                continue;
             }
+
+            // 调用单例 Handler 进行分发
+            EchoControlHandler::Instance().Dispatch(this, pe->GetPacket());
         }
 
         OnCustomEvent(e);
@@ -138,6 +187,29 @@ void DeviceBase::OnRegisterProperties() {}
 void DeviceBase::OnCustomEvent(Event_Ptr& e) {}
 
 void DeviceBase::OnRawDataReceived(const u8* data, u32 len) {}
+
+void DeviceBase::OnStateEnter(DevState state)
+{
+    switch (state)
+    {
+    case STATE_ONLINE:
+        StartReader();
+        break;
+
+    case STATE_OFFLINE:
+    case STATE_ERROR:
+        StopReader();
+        break;
+
+    default:
+        break;
+    }
+}
+
+void DeviceBase::OnStateExit(DevState)
+{
+    // 目前不需要做任何事
+}
 
 void DeviceBase::StartReader() {
     if (m_keepReading) return;
@@ -151,6 +223,61 @@ void DeviceBase::StopReader() {
         if (m_readThread->joinable()) m_readThread->join();
         delete m_readThread;
         m_readThread = nullptr;
+    }
+}
+
+bool DeviceBase::IsValidStateTransition(DevState from, DevState to) const
+{
+    if (from == to)
+        return true;
+
+    switch (from)
+    {
+    case STATE_UNKNOWN:
+        return to == STATE_INITIALIZED;
+
+    case STATE_INITIALIZED:
+        return to == STATE_OFFLINE
+            || to == STATE_CONNECTING;
+
+    case STATE_OFFLINE:
+        return to == STATE_CONNECTING
+            || to == STATE_ERROR;
+
+    case STATE_CONNECTING:
+        return to == STATE_ONLINE
+            || to == STATE_OFFLINE
+            || to == STATE_ERROR;
+
+    case STATE_ONLINE:
+        return to == STATE_WORKING
+            || to == STATE_OFFLINE
+            || to == STATE_ERROR;
+
+    case STATE_WORKING:
+        return to == STATE_ONLINE
+            || to == STATE_OFFLINE
+            || to == STATE_ERROR;
+
+    case STATE_ERROR:
+        return to == STATE_OFFLINE
+            || to == STATE_INITIALIZED;
+
+    default:
+        return false;
+    }
+}
+
+bool DeviceBase::IsStateOnline(DevState state) const
+{
+    switch (state)
+    {
+    case STATE_ONLINE:
+    case STATE_WORKING:
+        return true;
+
+    default:
+        return false;
     }
 }
 
