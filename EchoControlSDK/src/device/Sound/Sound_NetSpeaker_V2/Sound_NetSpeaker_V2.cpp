@@ -33,6 +33,11 @@ bool Sound_NetSpeaker_V2::Init(int slotID, const std::map<str, str>& config)
 
 bool Sound_NetSpeaker_V2::Start() 
 {
+    if (!Connect()) {
+        LOG_WARNING("[Slot %d] Start: Connect failed, will retry in run loop.", m_slotID);
+        // 注意：这里返回 true，允许线程启动，以便在线程里重连
+    }
+
     if (!DeviceBase::Start()) return false;
 
     // 启动心跳线程
@@ -109,8 +114,6 @@ void Sound_NetSpeaker_V2::SetMic(bool isOpen)
     if (isOpen) {
         // 切换到 mic_broadcast 模式
         SendJsonCmd(BuildJson("model_change", "\"model\":\"mic_broadcast\""));
-        // 实际喊话还需要建立 UDP 传输音频流，这部分较复杂，
-        // 这里先只发控制指令，UDP流通常由上层或者单独的模块处理
     }
     else {
         // 切回空闲
@@ -220,6 +223,14 @@ void Sound_NetSpeaker_V2::PushAudio(const u8* data, u32 len)
 void Sound_NetSpeaker_V2::AudioTxLoop() {
     u8 buf[1024]; // 每次发 1KB UDP 包
     UdpSocket udpSock(m_ip, 9888); // 发送专用 socket
+    try {
+        udpSock.open();
+    }
+    catch (...) {
+        LOG_ERROR("[Slot %d] UDP Open Failed", m_slotID);
+        return;
+    }
+
 
     while (m_keepHeartbeat) {
         if (!m_isMicOpen) {
@@ -229,7 +240,13 @@ void Sound_NetSpeaker_V2::AudioTxLoop() {
 
         int len = m_audioBuf->Read(buf, 1024);
         if (len > 0) {
-            udpSock.write(buf, len);
+            try {
+                // [关键] 发送音频数据
+                udpSock.write(buf, len);
+            }
+            catch (...) {
+                // UDP 发送失败通常忽略，保证流畅性
+            }
         }
         else {
             msleep(10);

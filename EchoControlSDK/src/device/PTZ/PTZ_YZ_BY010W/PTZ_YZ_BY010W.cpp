@@ -92,6 +92,12 @@ bool PTZ_YZ_BY010W::Connect() {
 }
 
 bool PTZ_YZ_BY010W::Start() {
+
+    if (!Connect()) {
+        LOG_WARNING("[Slot %d] Start: Connect failed, will retry in run loop.", m_slotID);
+        // 注意：这里返回 true，允许线程启动，以便在线程里重连
+    }
+
     if (!DeviceBase::Start()) return false;
 
     // 启动读取线程 (基类方法)

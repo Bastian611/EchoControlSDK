@@ -1,14 +1,19 @@
 ﻿#pragma once
 #include "EchoControlCode.h"
 
-// 动态库导出宏
-#ifdef _WIN32
-#ifdef ECHOCONTROLSDK_EXPORTS
-#define ECCS_API __declspec(dllexport)
-#else
-#define ECCS_API __declspec(dllimport)
+// =======================================================================
+// Windows 动态库/静态库 导出控制宏
+// =======================================================================
+#if defined(_WIN32) || defined(_WIN64)
+    #if defined(ECCS_STATIC)
+        #define ECCS_API
+    #elif defined(ECHOCONTROLSDK_EXPORTS)
+        #define ECCS_API __declspec(dllexport)
+    #else
+        #define ECCS_API __declspec(dllimport)
 #endif
 #else
+    // Linux/Mac
 #define ECCS_API
 #endif
 
@@ -129,7 +134,7 @@ extern "C" {
     // =======================================================
 
     /**
-     * @brief 超声波开关控制
+     * @brief 超声开关控制
      * @param hSystem 系统句柄
      * @param channel 通道号 (1=通道1, 2=通道2..., 0=所有)
      * @param isOpen  1=开启, 0=关闭

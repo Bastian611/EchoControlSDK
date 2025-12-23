@@ -4,26 +4,13 @@
 #include <string>
 #include <vector>
 #include <cstdio>
+#include "device/DeviceID.h"
 
 // --------------------------------------------------------
 // ID 定义 (必须与 DeviceID.h 保持一致)
 // --------------------------------------------------------
 typedef unsigned int u32;
-
-enum DeviceType {
-    DEVICE_LIGHT = 1,
-    DEVICE_SOUND = 2,
-    DEVICE_PTZ = 3,
-    DEVICE_RELAY = 4,
-    DEVICE_CAMERA = 5
-};
-
-enum LightModel { LIGHT_PT_LD_1307 = 1, LIGHT_HL_525_4W = 2 };
-enum SoundModel { SOUND_NETSPEAKER_V2 = 1 };
-enum PTZModel { PTZ_YZ_BY010W = 1 };
-
-// ID 生成宏: Type(8) | Model(16) | Index(8)
-#define MAKE_ID(type, model, idx) (u32)( ((type & 0xFF) << 24) | ((model & 0xFFFF) << 8) | (idx & 0xFF) )
+USING_ECCS
 
 // --------------------------------------------------------
 // 生成逻辑
@@ -41,8 +28,9 @@ void GenerateDeviceConfig(const std::string& path) {
     // 1. 强光设备 (Slot 1)
     // Model: HL-525 (对应 Factory 注册名)
     // ID: 0x01000201 (Light | HL-525 | Index 1)
-    u32 id1 = MAKE_ID(DEVICE_LIGHT, LIGHT_HL_525_4W, 1);
-    char buf1[32]; snprintf(buf1, 32, "0x%08X", id1);
+    u32 id1 = DeviceID(did::DeviceType::DEVICE_LIGHT, did::LightModel::LIGHT_HL_525_4W, 1).Value();
+    char buf1[32]; 
+    snprintf(buf1, 32, "0x%08X", id1);
 
     file << "[Slot_1]\n";
     file << "Enable=true\n";
@@ -55,8 +43,9 @@ void GenerateDeviceConfig(const std::string& path) {
     file << "\n";
 
     // 2. 云台设备 (Slot 2)
-    u32 id2 = MAKE_ID(DEVICE_PTZ, PTZ_YZ_BY010W, 1);
-    char buf2[32]; snprintf(buf2, 32, "0x%08X", id2);
+    u32 id2 = DeviceID(did::DeviceType::DEVICE_PTZ, did::PTZModel::PTZ_YZ_BY010W, 1).Value();
+    char buf2[32]; 
+    snprintf(buf2, 32, "0x%08X", id2);
 
     file << "[Slot_2]\n";
     file << "Enable=true\n";
@@ -69,8 +58,9 @@ void GenerateDeviceConfig(const std::string& path) {
     file << "\n";
 
     // 3. 强声设备 (Slot 3)
-    u32 id3 = MAKE_ID(DEVICE_SOUND, SOUND_NETSPEAKER_V2, 1);
-    char buf3[32]; snprintf(buf3, 32, "0x%08X", id3);
+    u32 id3 = DeviceID(did::DeviceType::DEVICE_SOUND, did::SoundModel::SOUND_NETSPEAKER_V2, 1).Value();
+    char buf3[32]; 
+    snprintf(buf3, 32, "0x%08X", id3);
 
     file << "[Slot_3]\n";
     file << "Enable=true\n";
@@ -82,7 +72,20 @@ void GenerateDeviceConfig(const std::string& path) {
     file << "Port=9527\n";
     file << "\n";
 
+    // 超声设备 （Slot 4）
+    u32 id4 = DeviceID(did::DeviceType::DEVICE_ULTRASONIC, did::UltrasonicModel::ULTRASONIC_TAS_IO_428R2, 1).Value();
+    char buf4[32];
+    snprintf(buf4, 32, "0x%08X", id4);
 
+    file << "[Slot_4]\n";
+    file << "Enable=true\n";
+    file << "Name=MainUltrasonic\n";
+    file << "Type=Ultrasonic\n";
+    file << "Model=TAS-IO-428R2\n";
+    file << "ID=" << buf4 << "\n";
+    file << "IP=192.168.1.230\n";
+    file << "Port=10123\n";
+    file << "\n";
 
     file.close();
     std::cout << "Generated: " << path << std::endl;

@@ -18,6 +18,11 @@ bool Light_HL_525_4W::Init(int slotID, const std::map<str, str>& config) {
     m_ip = GetPropValue<str>("IP");
     m_port = GetPropValue<int>("Port");
 
+    if (!Connect()) {
+        LOG_WARNING("[Slot %d] Start: Connect failed, will retry in run loop.", m_slotID);
+        // 注意：这里返回 true，允许线程启动，以便在线程里重连
+    }
+
     return true;
 }
 
