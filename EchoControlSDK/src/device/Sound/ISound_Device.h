@@ -1,32 +1,75 @@
 #pragma once
 #include "../DeviceBase.h"
+#include "device/DeviceDataTypes.h"
 
 ECCS_BEGIN
 
 class ISound_Device : public DeviceBase
 {
 public:
-    // === 纯虚接口 ===
-    virtual void PlayFile(const char* filename, bool loop) = 0;
-    virtual void StopPlay() = 0;
-    virtual void SetVolume(u8 vol) = 0;
-    virtual void GetVolume(u8 vol_play, u8 vol_cap) {
-        LOG_WARNING("[Slot %d] Device (Model: %s) does not support GetVolume.",
-            m_slotID, GetProperty("Model").c_str());
+    // =================================================
+    // 模式控制
+    // =================================================
+    virtual bool SetSoundMode(SoundStatus mode) = 0;
+    virtual SoundStatus GetSoundMode() const = 0;
+
+    // =================================================
+    // 播放控制
+    // =================================================
+    virtual bool PlayIndex(int index, bool loop = false) = 0;
+    virtual bool StopPlay() = 0;
+    virtual bool Next() = 0;
+    virtual bool Prev() = 0;
+    virtual bool SetSingleLoop(bool enable) = 0;
+
+    // =================================================
+    // 一键驱散
+    // =================================================
+    virtual bool OneKeyPlay(int index) = 0;
+
+    // =================================================
+    // 音量控制（Config 同步）
+    // =================================================
+    virtual bool SetPlayVolume(u8 vol) = 0;
+    virtual bool GetPlayVolume(u8& vol) const = 0;
+
+    virtual bool SetCaptureVolume(u8 vol) = 0;
+    virtual bool GetCaptureVolume(u8& vol) const = 0;
+
+    // =================================================
+    // 音频列表 / 文件管理
+    // =================================================
+    virtual bool GetAudioList(std::vector<SoundFileInfo>& list) = 0;
+    virtual bool UploadAudioFile(const char* name, const u8* data, u32 len) = 0;
+    virtual bool DeleteAudioFile(int index) = 0;
+
+    // =================================================
+    // 实时音频（全双工）
+    // =================================================
+    virtual bool PushAudio(const u8* data, u32 len) = 0;
+
+    using AudioCallback = std::function<void(const u8*, u32)>;
+    void SetCaptureCallback(AudioCallback cb) {
+        m_audioCb = cb;
     }
-    virtual void TTSPlay(const char* text) {
-        LOG_WARNING("[Slot %d] Device (Model: %s) does not support TTS.",
-            m_slotID, GetProperty("Model").c_str());
+
+    // =================================================
+    // 播放状态回调
+    // =================================================
+    using PlayStateCallback = std::function<void(SoundPlayState)>;
+    void SetPlayStateCallback(PlayStateCallback cb) {
+        m_playStateCb = cb;
     }
-    virtual void SetMic(bool isOpen) {
-        LOG_WARNING("[Slot %d] Device (Model: %s) does not support Mic.",
-            m_slotID, GetProperty("Model").c_str());
+
+protected:
+    bool IsSoundOnline() const {
+        return IsOnline() &&
+            (GetState() == STATE_ONLINE || GetState() == STATE_WORKING);
     }
-    // 推送音频数据接口
-    virtual void PushAudio(const u8* data, u32 len) {
-        LOG_WARNING("[Slot %d] Device (Model: %s) does not support Mic.",
-            m_slotID, GetProperty("Model").c_str());
-    }
+
+protected:
+    AudioCallback      m_audioCb;
+    PlayStateCallback  m_playStateCb;
 };
 
 ECCS_END
