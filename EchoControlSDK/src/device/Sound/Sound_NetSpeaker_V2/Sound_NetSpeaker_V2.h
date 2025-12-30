@@ -3,8 +3,10 @@
 #include "net/TCPSocket.h"
 #include "net/UDPSocket.h"
 #include "utils/ring_buffer.h"
+#include "device/DeviceDataTypes.h"
 #include <atomic>
 #include <thread>
+#include <vector>
 
 ECCS_BEGIN
 
@@ -12,62 +14,122 @@ class Sound_NetSpeaker_V2 : public ISound_Device
 {
 public:
     using Self = Sound_NetSpeaker_V2;
-    // 定义 ID: Sound + NetSpeaker_V2
+
+    // Sound + NetSpeaker_V2
     static const u32 ID = MAKE_DEV_OID(did::DEVICE_SOUND, did::SOUND_NETSPEAKER_V2);
 
-    // 注册工厂
     FACTORY_ID_CHILD_WITH_SPEC_NAME(u32, ID, DeviceBase, Self, "NetSpeaker-V2")
 
     Sound_NetSpeaker_V2();
     virtual ~Sound_NetSpeaker_V2();
 
+    // =================================================
+    // Device 生命周期
+    // =================================================
     virtual bool Init(int slotID, const std::map<str, str>& config) override;
     virtual bool Start() override;
     virtual void Stop() override;
 
-public:
-    // --- 实现 ISound_Device 纯虚接口 ---
-    virtual void PlayFile(const char* filename, bool loop) override;
-    virtual void StopPlay() override;
-    virtual void TTSPlay(const char* text) override;
-    virtual void SetMic(bool isOpen) override;
+    // =================================================
+    // ISound_Device 接口实现（最终定稿语义）
+    // =================================================
 
+    // --- 模式 ---
+    virtual bool SetSoundMode(SoundStatus mode) override;
+    virtual SoundStatus GetSoundMode() const override;
+
+    // --- 播放控制 ---
+    virtual bool PlayIndex(int index, bool loop = false) override;
+    virtual bool StopPlay() override;
+    virtual bool Next() override;
+    virtual bool Prev() override;
+
+    // --- 一键驱散 ---
+    virtual bool OneKeyPlay(int index) override;
+
+    // --- 音量 ---
+    virtual bool SetPlayVolume(u8 vol) override;
+    virtual bool SetCaptureVolume(u8 vol) override;
+
+    // --- 实时音频 ---
+    // MicBroadcast 模式下调用
+    virtual bool PushAudio(const u8* data, u32 len) override;
+
+protected:
+    // =================================================
+    // DeviceBase 钩子
+    // =================================================
     virtual void OnCustomEvent(Event_Ptr& e) override;
+    virtual void OnStateEnter(DevState state) override;
+    virtual void OnStateExit(DevState state) override;
 
-    virtual void SetVolume(u8 vol) override; 
-    virtual void GetVolume(u8 vol_play, u8 vol_cap) override;
-
-    virtual void PushAudio(const u8* data, u32 len) override; 
-
-private:
-    void SendJsonCmd(const str& json);
-    str BuildJson(const char* cmd, const char* params = "");
-
-    // 连接管理
+    // =================================================
+    // 内部协议 & 连接管理
+    // =================================================
     bool Connect();
+    void Disconnect();
 
-    // 心跳线程函数
-    void HeartbeatLoop();
+    void SendJsonCmd(const str& json);
+    str  BuildJson(const char* cmd, const char* params = nullptr);
 
-    // 定义内部使用的心跳事件ID
-    static const int EVENT_HEARTBEAT = EventTypes::User + 100;
-    void AudioTxLoop(); 
+    // =================================================
+    // 后台线程
+    // =================================================
+    void HeartbeatLoop();   // TCP 心跳
+    void AudioTxLoop();     // SDK → 设备（UDP）
+    void AudioRxLoop();     // 设备 → SDK（UDP，下行音频）
+
+    // =================================================
+    // 设备能力 & 配置同步
+    // =================================================
+    bool QueryDeviceInfo();         // 连接后获取设备信息
+    bool QueryVolume();             // 从设备读取音量
+    bool QueryAudioList();          // 获取音频列表
+    bool SyncConfigFromDevice();    // 写入 config
+    bool SyncConfigToDevice();      // 应用 config
 
 private:
-    str m_ip;
-    int m_port;
-    TcpSocket_Ptr m_socket;
+    // =================================================
+    // 网络
+    // =================================================
+    str             m_ip;
+    int             m_port{ 0 };
+    TcpSocket_Ptr   m_ctrlSocket;
+    UdpSocket_Ptr   m_audioTxSocket;
+    UdpSocket_Ptr   m_audioRxSocket;
 
-    // 协议相关
-    int m_cseq; // 自增序列号
+    // =================================================
+    // 协议状态
+    // =================================================
+    std::atomic<int>    m_cseq{ 0 };
+    std::atomic<SoundStatus> m_soundMode{ SoundStatus::Idle };
+    std::atomic<bool>  m_loopPlay{ false };
 
-    // 心跳专用
-    std::thread* m_heartbeatThread;
-    std::atomic<bool> m_keepHeartbeat;
+    // =================================================
+    // 音频缓存（SDK → 设备）
+    // =================================================
+    RingBuffer* m_audioTxBuf{ nullptr };
+    std::thread* m_audioTxThread{ nullptr };
+    std::atomic<bool>  m_keepAudioTx{ false };
 
-    RingBuffer* m_audioBuf;
-    std::thread* m_audioThread;
-    bool m_isMicOpen;
+    // =================================================
+    // 下行音频（设备 → SDK）
+    // =================================================
+    std::thread* m_audioRxThread{ nullptr };
+    std::atomic<bool>  m_keepAudioRx{ false };
+
+    // =================================================
+    // 心跳
+    // =================================================
+    std::thread* m_heartbeatThread{ nullptr };
+    std::atomic<bool>  m_keepHeartbeat{ false };
+
+    // =================================================
+    // 设备信息缓存
+    // =================================================
+    u8                m_playVolume{ 0 };
+    u8                m_captureVolume{ 0 };
+    std::vector<str>  m_audioList;
 };
 
 ECCS_END
