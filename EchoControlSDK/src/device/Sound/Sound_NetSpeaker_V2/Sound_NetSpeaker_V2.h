@@ -26,9 +26,9 @@ public:
     // =================================================
     // Device 生命周期
     // =================================================
-    virtual bool Init(int slotID, const std::map<str, str>& config) override;
-    virtual bool Start() override;
-    virtual void Stop() override;
+    virtual ECCS_Error Init(int slotID, const std::map<str, str>& config) override;
+    virtual ECCS_Error Start() override;
+    virtual ECCS_Error Stop() override;
 
     // =================================================
     // ISound_Device 接口实现（最终定稿语义）
@@ -39,21 +39,28 @@ public:
     virtual SoundStatus GetSoundMode() const override;
 
     // --- 播放控制 ---
-    virtual bool PlayIndex(int index, bool loop = false) override;
-    virtual bool StopPlay() override;
-    virtual bool Next() override;
-    virtual bool Prev() override;
+    virtual ECCS_Error PlayIndex(int index, bool loop = false) override;
+    virtual ECCS_Error StopPlay() override;
+    virtual ECCS_Error Next() override;
+    virtual ECCS_Error Prev() override;
 
     // --- 一键驱散 ---
-    virtual bool OneKeyPlay(int index) override;
+    virtual ECCS_Error OneKeyPlay(int index) override;
 
     // --- 音量 ---
-    virtual bool SetPlayVolume(u8 vol) override;
-    virtual bool SetCaptureVolume(u8 vol) override;
+    virtual ECCS_Error SetPlayVolume(u8 vol) override;
+    virtual ECCS_Error GetPlayVolume(u8& vol) const override;
+    virtual ECCS_Error SetCaptureVolume(u8 vol) override;
+
+    virtual ECCS_Error GetAudioList(std::vector<SoundFileInfo>& list) override;
+
+    virtual ECCS_Error UploadAudioFile(const str& name, const u8* data, u32 len) override;
+
+    virtual ECCS_Error DeleteAudioFile(int index) override;
 
     // --- 实时音频 ---
     // MicBroadcast 模式下调用
-    virtual bool PushAudio(const u8* data, u32 len) override;
+    virtual ECCS_Error PushAudio(const u8* data, u32 len) override;
 
 protected:
     // =================================================
@@ -71,6 +78,8 @@ protected:
 
     void SendJsonCmd(const str& json);
     str  BuildJson(const char* cmd, const char* params = nullptr);
+    void CtrlRxLoop();
+    void HandleJsonReply(const str& json);
 
     // =================================================
     // 后台线程
@@ -124,12 +133,17 @@ private:
     std::thread* m_heartbeatThread{ nullptr };
     std::atomic<bool>  m_keepHeartbeat{ false };
 
+    // 控制通道接收
+    std::thread* m_ctrlRxThread{ nullptr };
+    std::atomic<bool> m_flagReadCmd{ false };
+    std::string m_ctrlRxCache;
+
     // =================================================
     // 设备信息缓存
     // =================================================
     u8                m_playVolume{ 0 };
     u8                m_captureVolume{ 0 };
-    std::vector<str>  m_audioList;
+    std::vector<SoundFileInfo>  m_audioList;
 };
 
 ECCS_END

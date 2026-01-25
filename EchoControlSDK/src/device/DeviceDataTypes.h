@@ -35,4 +35,17 @@ struct SoundFileInfo
     u32 duration;   // 秒
 };
 
+// 自定义Json解析器
+struct JsonData
+{
+    std::map<std::string, std::string> jsonKV;
+};
+
+// 自定义Json值
+struct JsonValue
+{
+    str strVal;
+    std::vector<JsonValue> arrayVal;
+    bool isArray{ false };
+};
 ECCS_END

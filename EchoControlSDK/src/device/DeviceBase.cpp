@@ -13,7 +13,7 @@ DeviceBase::~DeviceBase() {
     Stop();
 }
 
-bool DeviceBase::Init(int slotID, const std::map<str, str>& config) {
+ECCS_Error DeviceBase::Init(int slotID, const std::map<str, str>& config) {
     m_slotID = slotID;
 
     // 注册通用属性 (直接使用内置的 RegisterProp)
@@ -43,23 +43,23 @@ bool DeviceBase::Init(int slotID, const std::map<str, str>& config) {
 
     if (!m_deviceID.IsIndexValid()) {
         LOG_ERROR("[Slot %d] Init Failed: Invalid Index in ID %s", m_slotID, idStr.c_str());
-        return false;
+        return ECCS_ERR_DEV_TYPE_MISMATCH;
     }
 
     m_shuttingDown = false;
     SetState(STATE_INITIALIZED);
 
-    return true;
+    return ECCS_SUCCESS;
 }
 
-bool DeviceBase::Start() {
-    if (m_state == TS_RUNNING) return true;
+ECCS_Error DeviceBase::Start() {
+    if (m_state == TS_RUNNING) return ECCS_SUCCESS;
     Thread::start();
     LOG_INFO("[Slot %d] Device Thread Started.", m_slotID);
-    return true;
+    return ECCS_SUCCESS;
 }
 
-void DeviceBase::Stop() {
+ECCS_Error DeviceBase::Stop() {
     if (m_state != TS_RUNNING && m_thread == nullptr) 
         return;
 

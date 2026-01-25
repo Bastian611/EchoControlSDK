@@ -17,6 +17,7 @@ enum ECCS_Error {
     ECCS_ERR_NOT_SUPPORTED = 4,  // 不支持该操作
     ECCS_ERR_TIMEOUT = 5,  // 操作超时
     ECCS_ERR_MALLOC = 6,  // 内存分配失败
+    ECCS_ERR_NET_ERROR = 7, // 网络异常
 
     // === 设备相关 (100 - 199) ===
     ECCS_ERR_DEV_NOT_FOUND = 100, // 句柄无效或设备未找到

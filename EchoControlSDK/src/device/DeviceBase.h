@@ -9,6 +9,7 @@
 #include "../debug/Logger.h"
 #include "../time/time_utils.h"
 #include "../utils/buffer.h"
+#include "../include/EchoControlCode.h"
 #include <functional>
 #include <map>
 #include <sstream>
@@ -39,11 +40,11 @@ public:
     // ------------------------------------------------
 
     // 初始化：slotID 和 配置Map
-    virtual bool Init(int slotID, const std::map<str, str>& config);
+    virtual ECCS_Error Init(int slotID, const std::map<str, str>& config);
 
     // 生命周期控制
-    virtual bool Start();
-    virtual void Stop();
+    virtual ECCS_Error Start();
+    virtual ECCS_Error Stop();
 
     // Packet 控制入口 (核心)
     virtual void ExecutePacket(std::shared_ptr<rpc::RpcPacket> pkt);

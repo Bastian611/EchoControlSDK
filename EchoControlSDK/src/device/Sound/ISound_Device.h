@@ -26,92 +26,92 @@ public:
     // =================================================
     // 播放控制
     // =================================================
-    virtual bool PlayIndex(int index, bool loop = false)
+    virtual ECCS_Error PlayIndex(int index, bool loop = false)
     {
         LOG_WARNING("[Slot %d] Device does not support PlayIndex()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
-    virtual bool StopPlay()
+    virtual ECCS_Error StopPlay()
     {
         LOG_WARNING("[Slot %d] Device does not support StopPlay()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
-    virtual bool Next()
+    virtual ECCS_Error Next()
     {
         LOG_WARNING("[Slot %d] Device does not support Next()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
-    virtual bool Prev()
+    virtual ECCS_Error Prev()
     {
         LOG_WARNING("[Slot %d] Device does not support Prev()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
     // =================================================
     // 一键驱散
     // =================================================
-    virtual bool OneKeyPlay(int index)
+    virtual ECCS_Error OneKeyPlay(int index)
     {
         LOG_WARNING("[Slot %d] Device does not support OneKeyPlay()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
     // =================================================
     // 音量控制（Config 同步）
     // =================================================
-    virtual bool SetPlayVolume(u8 vol)
+    virtual ECCS_Error SetPlayVolume(u8 vol)
     {
         LOG_WARNING("[Slot %d] Device does not support SetPlayVolume()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
-    virtual bool GetPlayVolume(u8& vol) const
+    virtual ECCS_Error GetPlayVolume(u8& vol) const
     {
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
-    virtual bool SetCaptureVolume(u8 vol)
+    virtual ECCS_Error SetCaptureVolume(u8 vol)
     {
         LOG_WARNING("[Slot %d] Device does not support SetCaptureVolume()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
-    virtual bool GetCaptureVolume(u8& vol) const
+    virtual ECCS_Error GetCaptureVolume(u8& vol) const
     {
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
     // =================================================
     // 音频列表 / 文件管理
     // =================================================
-    virtual bool GetAudioList(std::vector<str>& list)
+    virtual ECCS_Error GetAudioList(std::vector<SoundFileInfo>& list)
     {
         LOG_WARNING("[Slot %d] Device does not support GetAudioList()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
-    virtual bool UploadAudioFile(const str& name, const u8* data, u32 len)
+    virtual ECCS_Error UploadAudioFile(const str& name, const u8* data, u32 len)
     {
         LOG_WARNING("[Slot %d] Device does not support UploadAudioFile()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
-    virtual bool DeleteAudioFile(int index)
+    virtual ECCS_Error DeleteAudioFile(int index)
     {
         LOG_WARNING("[Slot %d] Device does not support DeleteAudioFile()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
     // =================================================
     // 实时音频（全双工）
     // =================================================
-    virtual bool PushAudio(const u8* data, u32 len)
+    virtual ECCS_Error PushAudio(const u8* data, u32 len)
     {
         LOG_WARNING("[Slot %d] Device does not support PushAudio()", m_slotID);
-        return false;
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
     // =================================================
