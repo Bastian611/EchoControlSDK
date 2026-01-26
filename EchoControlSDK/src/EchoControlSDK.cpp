@@ -14,8 +14,6 @@ USING_ECCS
 static const char* DEFAULT_RULE_PATH = "./config/global.cfg";
 static const char* DEFAULT_DEV_PATH  = "./config/device.cfg";
 
-// --- 内部辅助 ---
-
 // 安全转换句柄
 static ConfigManager* SafeCast(ECCS_HANDLE hDev) {
     if (hDev == ECCS_INVALID_HANDLE) return nullptr;
@@ -192,7 +190,6 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Sound_SetVolume(ECCS_HANDLE hDev, int volume) 
     {
         rpc::SoundVolCtrl data = { (u8)volume };
-        // 确保 PacketDef.h 中有 RqSoundSetVolume
         return PostPkt<rpc::RqSetSoundVolume>(hDev, did::DEVICE_SOUND, data);
     }
 
