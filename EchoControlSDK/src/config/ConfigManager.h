@@ -49,6 +49,8 @@ public:
     // 设置全局回调给所有设备
     void SetGlobalCallback(std::function<void(std::shared_ptr<rpc::RpcPacket>)> cb);
 
+    DeviceBase* GetBestDevice(did::DeviceType type);
+
 private:
     int ParseSlotID(const str& sectionName);
 
@@ -59,6 +61,9 @@ private:
 private:
     std::map<int, SlotRule> m_rules;
     std::map<int, DeviceBase*> m_devices; // 系统中所有设备的持有者
+
+    mutable std::mutex m_devMutex;        // 保护 m_devices 的访问
+    std::atomic<bool>  m_initialized;    // SDK 全局初始化状态
 };
 
 ECCS_END

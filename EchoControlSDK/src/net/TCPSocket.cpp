@@ -806,446 +806,58 @@ again:
 }
 u32 TcpSocket::read(u8* buf, u32 len, u32 MinPacketLen)
 {
-    if (_sock == HD_INVALID_SOCKET) {
-        throw EInvalidOperation("TcpSocket::read() read on a non-open socket");
-    }
-    int iRet = 0;
-    // HD_EAGAIN can be signalled both when a timeout has occurred and when
-    // the system is out of resources (an awesome undocumented feature).
-    // The following is an approximation of the time interval under which
-    // HD_EAGAIN is taken to indicate an out of resources error.
-    u32 eagainThresholdMicros = 0;
-    if (_recvTimeout) {
-        // if a readTimeout is specified along with a max number of recv retries, then
-        // the threshold will ensure that the read timeout is not exceeded even in the
-        // case of resource errors
-        eagainThresholdMicros = (_recvTimeout * 1000) / ((_maxRetries > 0) ? _maxRetries : 2);
-    }
+    if (len <= MinPacketLen) return 0;
 
-    i32 retries = 0;
-
-again:
-    std::unique_ptr<ElapsedTimer> et;
-    if (_recvTimeout > 0) {
-        et.reset(new ElapsedTimer);
-        et->start();
-    }
-
-#ifdef _WIN32
-    // for block Winsock: minimum resolution of SO_RCVTIMEO is about 500ms
-    if (true)
-#else
-    if (_interrupt)
-#endif
-    {
-        HD_POLLFD fds[2];
-        memset(fds, 0, sizeof(fds));
-        fds[0].fd = _sock;
-        fds[0].events = HD_POLLIN;
-        if (_interrupt) {
-            fds[1].fd = *(_interrupt.get());
-            fds[1].events = HD_POLLIN;
-        }
-
-        int iRet = HD_POLL(fds, 2, (_recvTimeout == 0) ? -1 : _recvTimeout);
-        if (iRet < 0) {
-            // error cases
-            int e = HD_GET_SOCKET_ERROR;
-            if (e == HD_EINTR && (++retries <= _maxRetries)) {
-                goto again;
-            }
-            throw ESocketError("TcpSocket::read() HD_POLL()", e);
-        }
-        else if (iRet > 0) {
-            // Check the interruptListener
-            if (fds[1].revents & HD_POLLIN) {
-                throw EInterrupt("TcpSocket::read() interrupted");
-            }
-        }
-        else {
-            throw ETimeout("TcpSocket::read() HD_POLL() timeout");
-        }
-
-        // falling through means there is something to recv and it cannot block
-    }
-    //当待接受包大于MIN_PACKET_LEN字节时，由于服务写包时进行了分包，因此读包时需要做对应操作
-    if (len > MIN_PACKET_LEN)
-    {
-        //buf写入位置指示器
-        int index = 0;
-        //计算最后不足123个字节大小的剩余包长度
-        u32 _packet_left_len = len % (MAX_PATCH_LEN - 5);
-        //计算分包个数(循环分包次数)
-        u32 _loop_times;
-        (_packet_left_len == 0) ? (_loop_times = len / (MAX_PATCH_LEN - 5)) : (_loop_times = len / (MAX_PATCH_LEN - 5) + 1);
-        std::shared_ptr<char> sp(new char[MAX_PATCH_LEN]);
-        char* precv = sp.get();
-        for (int i = 0; i < _loop_times; i++)
-        {
-            if (0 == i)
-            {
-                int offset = MAX_PATCH_LEN - MinPacketLen;
-                //由于RPCReadPackage中读过包头，因此第一次读包需跳过MinPacketLen
-                iRet = recv(_sock, precv, offset, 0);
-                //判断包尾是否有分包标志位，从而判断这个包是否为长度大于128的包的分包
-                if (iRet < 0)
-                {
-                    int e = HD_GET_SOCKET_ERROR;
-                    if (e == HD_EAGAIN)
-                    {
-                        // if no timeout we can assume that resource exhaustion has occurred.
-                        if (_recvTimeout == 0) {
-                            throw ETimeout("TcpSocket::read() recv() unavailable resources");
-                        }
-                        // check if this is the lack of resources or timeout case
-                        if (et->uelapsed() < eagainThresholdMicros) {
-                            if (++retries <= _maxRetries) {
-                                LOG_INFO("TcpSocket::read ： eagainThresholMicros : %d, retries : %d, maxRetries : %d", eagainThresholdMicros, retries, _maxRetries)
-                                    msleep(20);
-                                goto again;
-                            }
-                            throw ETimeout(" TcpSocket::read() recv() unavailable resources");
-                        }
-                        // infer that timeout has been hit
-                        throw ETimeout("TcpSocket::read() recv() timeout");
-                    }
-
-                    // If interrupted, try again
-                    if (e == HD_EINTR && ++retries <= _maxRetries) {
-                        goto again;
-                    }
-
-                    if (e == HD_ETIMEDOUT) {
-                        throw ETimeout("TcpSocket::read() recv() timeout");
-                    }
-
-                    throw ESocketError("TcpSocket::read() recv()", e);
-                }
-                else if (iRet == 0) {
-                    throw ESocketError("TcpSocket::read() connection has been closed");
-                }
-                if ('$' == *(precv + offset - 5) && \
-                    'M' == *(precv + offset - 4) && \
-                    'M' == *(precv + offset - 3) && \
-                    'S' == *(precv + offset - 2) && \
-                    '$' == *(precv + offset - 1))
-                {
-                    //该包是分包的中间包
-                    memcpy(buf, precv, offset - 5);
-                    index += offset - 5;
-                    LOG_INFO("TcpSocket::read : get depatched Packet Middle, len = %d, index size = %d", len, index)
-                        LOG_INFO("TcpSocket::read signature:%d, %d, %d, %d, %d", *(precv + offset - 5), *(precv + offset - 4), *(precv + offset - 3), *(precv + offset - 2), *(precv + offset - 1))
-
-                        //LOG_INFO("TcpSocket::read : get depatched Packet , len = %d, offset = %d, index = %d",len,offset,index);
-                }
-                else {
-                    LOG_INFO("TcpSocket::read : get depatched Packet Wrong End")
-                        LOG_INFO("TcpSocket::read signature:%d, %d, %d, %d, %d", *(precv + offset - 5), *(precv + offset - 4), *(precv + offset - 3), *(precv + offset - 2), *(precv + offset - 1))
-                }
-            }
-            else if (i == _loop_times - 1)
-            {
-                if (_packet_left_len == 0)
-                {
-                    _packet_left_len = MAX_PATCH_LEN - 5;
-                }
-                iRet = recv(_sock, precv, _packet_left_len + 5, 0);
-                if (iRet < 0)
-                {
-                    int e = HD_GET_SOCKET_ERROR;
-                    if (e == HD_EAGAIN)
-                    {
-                        // if no timeout we can assume that resource exhaustion has occurred.
-                        if (_recvTimeout == 0) {
-                            throw ETimeout("TcpSocket::read() recv() unavailable resources");
-                        }
-                        // check if this is the lack of resources or timeout case
-                        if (et->uelapsed() < eagainThresholdMicros) {
-                            if (++retries <= _maxRetries) {
-                                LOG_INFO("TcpSocket::read ： eagainThresholMicros : %d, retries : %d, maxRetries : %d", eagainThresholdMicros, retries, _maxRetries)
-                                    msleep(20);
-                                goto again;
-                            }
-                            throw ETimeout(" TcpSocket::read() recv() unavailable resources");
-                        }
-                        // infer that timeout has been hit
-                        throw ETimeout("TcpSocket::read() recv() timeout");
-                    }
-
-                    // If interrupted, try again
-                    if (e == HD_EINTR && ++retries <= _maxRetries) {
-                        goto again;
-                    }
-
-                    if (e == HD_ETIMEDOUT) {
-                        throw ETimeout("TcpSocket::read() recv() timeout");
-                    }
-
-                    throw ESocketError("TcpSocket::read() recv()", e);
-                }
-                else if (iRet == 0) {
-                    throw ESocketError("TcpSocket::read() connection has been closed");
-                }
-                if ('$' == *(precv + _packet_left_len) && \
-                    'E' == *(precv + _packet_left_len + 1) && \
-                    'n' == *(precv + _packet_left_len + 2) && \
-                    'd' == *(precv + _packet_left_len + 3) && \
-                    '$' == *(precv + _packet_left_len + 4))
-                {
-                    //该包是分包结束包
-                    memcpy(buf + index, precv, _packet_left_len);
-                    index += _packet_left_len;
-                    LOG_INFO("TcpSocket::read : get depatched Packet End, len = %d, index size = %d", len, index)
-                        LOG_INFO("TcpSocket::read signature:%d, %d, %d, %d, %d", *(precv + _packet_left_len), *(precv + _packet_left_len + 1), *(precv + _packet_left_len + 2), *(precv + _packet_left_len + 3), *(precv + _packet_left_len + 4))
-
-                        //LOG_INFO("TcpSocket::read : get depatched Packet End, len = %d, index = %d",len,index);
-                }
-                else {
-                    LOG_INFO("TcpSocket::read : get depatched Packet Wrong End")
-                        LOG_INFO("TcpSocket::read Error:%d, %d, %d, %d, %d", *(precv + _packet_left_len), *(precv + _packet_left_len + 1), *(precv + _packet_left_len + 2), *(precv + _packet_left_len + 3), *(precv + _packet_left_len + 4))
-                }
-            }
-            else {
-                iRet = recv(_sock, precv, MAX_PATCH_LEN, 0);
-                //判断包尾是否有分包标志位，从而判断这个包是否为长度大于128的包的分包
-                if (iRet < 0)
-                {
-                    int e = HD_GET_SOCKET_ERROR;
-                    if (e == HD_EAGAIN)
-                    {
-                        // if no timeout we can assume that resource exhaustion has occurred.
-                        if (_recvTimeout == 0) {
-                            throw ETimeout("TcpSocket::read() recv() unavailable resources");
-                        }
-                        // check if this is the lack of resources or timeout case
-                        if (et->uelapsed() < eagainThresholdMicros) {
-                            if (++retries <= _maxRetries) {
-                                LOG_INFO("TcpSocket::read ： eagainThresholMicros : %d, retries : %d, maxRetries : %d", eagainThresholdMicros, retries, _maxRetries)
-                                    msleep(20);
-                                goto again;
-                            }
-                            throw ETimeout(" TcpSocket::read() recv() unavailable resources");
-                        }
-                        // infer that timeout has been hit
-                        throw ETimeout("TcpSocket::read() recv() timeout");
-                    }
-
-                    // If interrupted, try again
-                    if (e == HD_EINTR && ++retries <= _maxRetries) {
-                        goto again;
-                    }
-
-                    if (e == HD_ETIMEDOUT) {
-                        throw ETimeout("TcpSocket::read() recv() timeout");
-                    }
-
-                    throw ESocketError("TcpSocket::read() recv()", e);
-                }
-                else if (iRet == 0) {
-                    throw ESocketError("TcpSocket::read() connection has been closed");
-                }
-                if ('$' == *(precv + MAX_PATCH_LEN - 5) && \
-                    'M' == *(precv + MAX_PATCH_LEN - 4) && \
-                    'M' == *(precv + MAX_PATCH_LEN - 3) && \
-                    'S' == *(precv + MAX_PATCH_LEN - 2) && \
-                    '$' == *(precv + MAX_PATCH_LEN - 1))
-                {
-                    //该包是分包的中间包
-                    memcpy(buf + index, precv, MAX_PATCH_LEN - 5);
-                    LOG_INFO("TcpSocket::read signature:%d, %d, %d, %d, %d", *(precv + MAX_PATCH_LEN - 5), *(precv + MAX_PATCH_LEN - 4), *(precv + MAX_PATCH_LEN - 3), *(precv + MAX_PATCH_LEN - 2), *(precv + MAX_PATCH_LEN - 1))
-                        index += (MAX_PATCH_LEN - 5);
-                    LOG_INFO("TcpSocket::read : get depatched Packet Middle, len = %d, index size = %d", len, index)
-
-
-                        //LOG_INFO("TcpSocket::read : get depatched Packet , len = %d, buf size = %d, index = %d",len,strlen((char*)buf),index);
-                }
-                else if ('$' == *(precv + MAX_PATCH_LEN - 5) && \
-                    'E' == *(precv + MAX_PATCH_LEN - 4) && \
-                    'n' == *(precv + MAX_PATCH_LEN - 3) && \
-                    'd' == *(precv + MAX_PATCH_LEN - 2) && \
-                    '$' == *(precv + MAX_PATCH_LEN - 1))
-                {
-                    //该包是分包结束包
-                    memcpy(buf + index, precv, MAX_PATCH_LEN - 5);
-                    index += MAX_PATCH_LEN - 5;
-                    //LOG_INFO("TcpSocket::read : get depatched Packet End, len = %d, buf size = %d, index = %d",len,strlen((char*)buf),index);
-                }
-                else {
-                    LOG_INFO("TcpSocket::read : get depatched Packet Wrong End")
-                        LOG_INFO("TcpSocket::read signature:%d, %d, %d, %d, %d", *(precv + MAX_PATCH_LEN - 5), *(precv + MAX_PATCH_LEN - 4), *(precv + MAX_PATCH_LEN - 3), *(precv + MAX_PATCH_LEN - 2), *(precv + MAX_PATCH_LEN - 1))
-                }
-            }
-        }
-#if RPC_DEBUG_LOG
-        LOG_INFO("TcpSocket::read : read index = %d", index)
-#endif
-            return index;
-
-    }
-    else {
-        iRet = recv(_sock, (char*)(buf), len - MinPacketLen, 0);
-        if (iRet < 0)
-        {
-            int e = HD_GET_SOCKET_ERROR;
-            if (e == HD_EAGAIN)
-            {
-                // if no timeout we can assume that resource exhaustion has occurred.
-                if (_recvTimeout == 0) {
-                    throw ETimeout("TcpSocket::read() recv() unavailable resources");
-                }
-                // check if this is the lack of resources or timeout case
-                if (et->uelapsed() < eagainThresholdMicros) {
-                    if (++retries <= _maxRetries) {
-                        LOG_INFO("TcpSocket::read ： eagainThresholMicros : %d, retries : %d, maxRetries : %d", eagainThresholdMicros, retries, _maxRetries)
-                            msleep(20);
-                        goto again;
-                    }
-                    throw ETimeout(" TcpSocket::read() recv() unavailable resources");
-                }
-                // infer that timeout has been hit
-                throw ETimeout("TcpSocket::read() recv() timeout");
-            }
-
-            // If interrupted, try again
-            if (e == HD_EINTR && ++retries <= _maxRetries) {
-                goto again;
-            }
-
-            if (e == HD_ETIMEDOUT) {
-                throw ETimeout("TcpSocket::read() recv() timeout");
-            }
-
-            throw ESocketError("TcpSocket::read() recv()", e);
-        }
-        else if (iRet == 0) {
-            throw ESocketError("TcpSocket::read() connection has been closed");
-        }
-#if RPC_DEBUG_LOG
-        LOG_INFO("TcpSocket::read : read index = %d", iRet)
-#endif
-            return iRet;
-    }
-
+    // 调用 readFull 确保读够剩下的 (len - MinPacketLen) 字节
+    return readFull(buf, len - MinPacketLen);
 }
+
+// =====================================================================
+// 读取加固逻辑：readFull
+// =====================================================================
+u32 TcpSocket::readFull(u8* buf, u32 len)
+{
+    if (_sock == HD_INVALID_SOCKET) {
+        throw EInvalidOperation("TcpSocket::readFull() on a non-open socket");
+    }
+
+    u32 totalRead = 0;
+    while (totalRead < len) {
+        // 直接复用带 poll 机制的 read 函数读取剩余部分
+        u32 r = read(buf + totalRead, len - totalRead);
+        if (r == 0) {
+            throw ESocketError("TcpSocket::readFull() connection closed unexpectedly");
+        }
+        totalRead += r;
+    }
+    return totalRead;
+}
+
 u32 TcpSocket::writePartial(const u8* buf, u32 len)
 {
-    int iRet;
     if (_sock == HD_INVALID_SOCKET) {
-        throw EInvalidOperation("TcpSocket::writePartial() write on a non-open socket");
+        throw EInvalidOperation("TcpSocket::writePartial() on a non-open socket");
     }
 
     int flags = 0;
 #ifdef MSG_NOSIGNAL
-    // Note the use of MSG_NOSIGNAL to suppress SIGPIPE errors, instead we
-    // check for the HD_EPIPE return condition and close the socket in that case
     flags |= MSG_NOSIGNAL;
 #endif
-    if (len > MIN_PACKET_LEN && len < 1500)
-    {
-        //当待发包大小超过MIN_PACKET_LEN字节时，进行分包操作
-        const u8* pos = buf;
-        //计算最后不足MAX_PATCH_LEN-5个字节大小的剩余包长度
-        u32 _packet_left_len = len % (MAX_PATCH_LEN - 5);
-        //计算分包个数(循环分包次数)
-        u32 _loop_times;
-        (_packet_left_len == 0) ? (_loop_times = len / (MAX_PATCH_LEN - 5)) : (_loop_times = len / (MAX_PATCH_LEN - 5) + 1);
-        std::shared_ptr<u8> sp(new u8[MAX_PATCH_LEN]);
-        u8* patch_buf = sp.get();
-        int _byte_sent = 0;
-        for (int i = 0; i < _loop_times; i++)
-        {
-            if (_loop_times - 1 == i)
-            {
-                if (_packet_left_len == 0)
-                {
-                    _packet_left_len = MAX_PATCH_LEN - 5;
-                }
-                std::shared_ptr<u8> sp2(new u8[_packet_left_len + 5]);
-                u8* final_buf = sp2.get();
-                memcpy(final_buf, pos, _packet_left_len);
-                //LOG_INFO("len = %d , _packet_left_len = %d, packet end = %d,%d",len,_packet_left_len,*(final_buf+_packet_left_len-1),*(final_buf+_packet_left_len))
-                //在分包包尾加上简单字符校验
-                memset(final_buf + _packet_left_len, '$', 1);
-                memset(final_buf + _packet_left_len + 1, 'E', 1);
-                memset(final_buf + _packet_left_len + 2, 'n', 1);
-                memset(final_buf + _packet_left_len + 3, 'd', 1);
-                memset(final_buf + _packet_left_len + 4, '$', 1);
-                //LOG_INFO("TcpSocket::writePartial patch signature: %d, %d, %d, %d, %d",*(final_buf+_packet_left_len),*(final_buf+_packet_left_len+1),*(final_buf+_packet_left_len+2),*(final_buf+_packet_left_len+3),*(final_buf+_packet_left_len+4))
-                //tcp发送
-                iRet = send(_sock, (const char*)final_buf, _packet_left_len + 5, flags);
-#if RPC_DEBUG_LOG & 0x0010
-                LOG_INFO("TcpSocket::writePartial send patch packet, len = %d byte", _packet_left_len + 5)
-#endif
-                    if (iRet < 0) {
-                        int e = HD_GET_SOCKET_ERROR;
-                        if (e == HD_EWOULDBLOCK || e == HD_EAGAIN) {
-                            return 0;
-                        }
-                        throw ESocketError("TcpSocket::writePartial() send()", e);
-                    }
 
-                // Fail on blocked send
-                if (iRet == 0 && len != 0) {
-                    throw ESocketError("TcpSocket::writePartial() send() 0 byte sent");
-                }
-                //当前低带宽电台发送缓存上限240 byte，发送设置100ms延时防止电台传输丢包
-                msleep(100);
-                _byte_sent += iRet;
-            }
-            else
-            {
-                memcpy(patch_buf, pos, MAX_PATCH_LEN - 5);
-                pos += MAX_PATCH_LEN - 5;
-                //在分包包尾加上简单字符校验
-                memset(patch_buf + MAX_PATCH_LEN - 5, '$', 1);
-                memset(patch_buf + MAX_PATCH_LEN - 4, 'M', 1);
-                memset(patch_buf + MAX_PATCH_LEN - 3, 'M', 1);
-                memset(patch_buf + MAX_PATCH_LEN - 2, 'S', 1);
-                memset(patch_buf + MAX_PATCH_LEN - 1, '$', 1);
-                //LOG_INFO("TcpSocket::writePartial patch signature: %d, %d, %d, %d, %d",*(patch_buf+123),*(patch_buf+123+1),*(patch_buf+123+2),*(patch_buf+123+3),*(patch_buf+123+4))
-                //发送
-                iRet = send(_sock, (const char*)patch_buf, MAX_PATCH_LEN, flags);
-#if RPC_DEBUG_LOG & 0x0010
-                LOG_INFO("TcpSocket::writePartial send patch packet, len = %d byte", MAX_PATCH_LEN - 5)
-#endif
-                    if (iRet < 0) {
-                        int e = HD_GET_SOCKET_ERROR;
-                        if (e == HD_EWOULDBLOCK || e == HD_EAGAIN) {
-                            return 0;
-                        }
-                        throw ESocketError("TcpSocket::writePartial() send()", e);
-                    }
+    // 标准 TCP 发送，不添加特殊校验符，速度由网络环境决定
+    int iRet = send(_sock, (const char*)buf, len, flags);
 
-                // Fail on blocked send
-                if (iRet == 0 && len != 0) {
-                    throw ESocketError("TcpSocket::writePartial() send() 0 byte sent");
-                }
-                _byte_sent += iRet;
-                //当前低带宽电台发送缓存上限240 byte，发送设置100ms延时防止电台传输丢包
-                msleep(100);
-            }
-        }
-        return _byte_sent;
+    if (iRet < 0) {
+        int e = HD_GET_SOCKET_ERROR;
+        if (e == HD_EWOULDBLOCK || e == HD_EAGAIN) return 0;
+        throw ESocketError("TcpSocket::writePartial() send failed", e);
     }
-    else {
-        iRet = send(_sock, (const char*)buf, len, flags);
 
-        if (iRet < 0) {
-            int e = HD_GET_SOCKET_ERROR;
-            if (e == HD_EWOULDBLOCK || e == HD_EAGAIN) {
-                return 0;
-            }
-            throw ESocketError("TcpSocket::writePartial() send()", e);
-        }
-
-        // Fail on blocked send
-        if (iRet == 0 && len != 0) {
-            throw ESocketError("TcpSocket::writePartial() send() 0 byte sent");
-        }
-        //当前低带宽电台发送缓存上限240 byte，发送设置100ms延时防止电台传输丢包
-        msleep(80);
-        return iRet;
+    if (iRet == 0 && len != 0) {
+        throw ESocketError("TcpSocket::writePartial() 0 byte sent");
     }
+
+    return (u32)iRet;
 }
 void TcpSocket::write(const u8* buf, u32 len)
 {

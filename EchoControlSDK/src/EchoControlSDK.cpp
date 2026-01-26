@@ -10,9 +10,17 @@
 
 USING_ECCS
 
+#define GET_MGR() ConfigManager::getInstance()
+
+// 核心安全检查：确保 SDK 已初始化
+#define CHECK_INIT_AND_GET_MGR() \
+    if (!GET_MGR()->IsInitialized()) return ECCS_ERR_NOT_INIT; \
+    ConfigManager* mgr = GET_MGR();
+
 // 默认配置文件路径
 static const char* DEFAULT_RULE_PATH = "./config/global.cfg";
 static const char* DEFAULT_DEV_PATH  = "./config/device.cfg";
+
 
 // 安全转换句柄
 static ConfigManager* SafeCast(ECCS_HANDLE hDev) {
@@ -51,6 +59,7 @@ static DeviceBase* InternalFindDevice(ConfigManager* mgr, did::DeviceType type)
 template <typename TPacket, typename TVal>
 ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val)
 {
+    CHECK_INIT_AND_GET_MGR();
     ConfigManager* mgr = SafeCast(hDev);
     DeviceBase* dev = InternalFindDevice(mgr, type);
 
@@ -73,8 +82,6 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Init()
     {
         try {
-            // 使用默认路径
-        	// 建议在 ConfigManager 内部处理路径检查，如果文件不存在抛出异常
         	ConfigManager::getInstance()->LoadSystem(DEFAULT_RULE_PATH, DEFAULT_DEV_PATH);
         	return ECCS_SUCCESS;
         }

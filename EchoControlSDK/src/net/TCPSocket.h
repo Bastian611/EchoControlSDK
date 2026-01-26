@@ -80,6 +80,10 @@ public:
      * @return 读取的字节数
      */
     u32 read(u8* buf, u32 len, u32 MinPacketLen);
+    /**
+     * @brief 核心加固：精准读取指定长度数据（解决 TCP 粘包/断包）
+     */
+    u32 readFull(u8* buf, u32 len);
     u32 writePartial(const u8* buf, u32 len);
     void write(const u8* buf, u32 len);
 

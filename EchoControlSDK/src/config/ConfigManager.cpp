@@ -15,12 +15,17 @@ ConfigManager::ConfigManager()
 
 }
 
-ConfigManager::~ConfigManager() {
+ConfigManager::~ConfigManager() 
+{
     Release();
 }
 
-void ConfigManager::Release() {
-    for (auto& pair : m_devices) {
+void ConfigManager::Release() 
+{
+    SMART_LOCK(m_devMutex);
+    m_initialized = false; // 释放开始，先封锁控制入口
+    for (auto& pair : m_devices) 
+    {
         if (pair.second) {
             pair.second->Stop();
             delete pair.second;
@@ -29,13 +34,16 @@ void ConfigManager::Release() {
     m_devices.clear();
 }
 
-DeviceBase* ConfigManager::GetDevice(int slotID) {
+DeviceBase* ConfigManager::GetDevice(int slotID) 
+{
+    SMART_LOCK(m_devMutex); // 确保多线程安全
     auto it = m_devices.find(slotID);
     return (it != m_devices.end()) ? it->second : nullptr;
 }
 
 DeviceBase* ConfigManager::GetDeviceByIndex(int index) 
 {
+    SMART_LOCK(m_devMutex);
     if (index < 0 || index >= m_devices.size()) {
         return nullptr;
     }
@@ -44,7 +52,9 @@ DeviceBase* ConfigManager::GetDeviceByIndex(int index)
     return it->second;
 }
 
-int ConfigManager::ParseSlotID(const str& sectionName) {
+int ConfigManager::ParseSlotID(const str& sectionName) 
+{
+    SMART_LOCK(m_devMutex);
     if (sectionName.find("Slot_") != 0) return -1;
     str numStr = sectionName.substr(5);
     return std::atoi(numStr.c_str());
@@ -52,6 +62,8 @@ int ConfigManager::ParseSlotID(const str& sectionName) {
 
 void ConfigManager::LoadSystem(const str& rulePath, const str& paramPath)
 {
+    SMART_LOCK(m_devMutex);// 加锁保护加载过程
+
     m_paramPath = paramPath; // 记录路径
     LOG_INFO("ConfigManager: Loading System... Rules: %s, Params: %s", rulePath.c_str(), paramPath.c_str());
 
@@ -157,9 +169,14 @@ void ConfigManager::LoadSystem(const str& rulePath, const str& paramPath)
             LOG_ERROR("[ConfigManager] Factory Failed for OID 0x%X", expectedOID);
         }
     }
+    // 加载完成后置位
+    m_initialized = true;
+    LOG_INFO("ConfigManager: System initialized.");
 }
 
-bool ConfigManager::UpdateConfig(int slotID, const str& key, const str& value) {
+bool ConfigManager::UpdateConfig(int slotID, const str& key, const str& value) 
+{
+    SMART_LOCK(m_devMutex);
     if (m_paramPath.empty()) return false;
 
     // 重新加载解析器 (或者保持一个成员变量)
@@ -177,12 +194,38 @@ bool ConfigManager::UpdateConfig(int slotID, const str& key, const str& value) {
 
 void ConfigManager::SetGlobalCallback(std::function<void(std::shared_ptr<rpc::RpcPacket>)> cb) 
 {
+    SMART_LOCK(m_devMutex);
     for (auto& pair : m_devices) {
         if (pair.second) {
             pair.second->SetStatusCallback(cb);
         }
     }
     // TODO: 如果设备是后续动态添加的，也需要存下 cb 并赋值
+}
+
+// 用户调用“开灯”时，SDK 内部通过这个函数找到最合适的灯
+DeviceBase* ConfigManager::GetBestDevice(did::DeviceType type)
+{
+    SMART_LOCK(m_devMutex);
+
+    // 策略 A：优先返回当前在线(ONLINE/WORKING)的设备
+    for (auto& pair : m_devices) {
+        DeviceBase* dev = pair.second;
+        if (dev && dev->GetDeviceID().GetDeviceType() == type) {
+            if (dev->IsOnline()) {
+                return dev;
+            }
+        }
+    }
+
+    // 策略 B：如果没有在线的，返回该类型的第一个配置设备（尝试激发它）
+    for (auto& pair : m_devices) {
+        if (pair.second && pair.second->GetDeviceID().GetDeviceType() == type) {
+            return pair.second;
+        }
+    }
+
+    return nullptr; // 彻底没找到该类型的硬件
 }
 
 ECCS_END
