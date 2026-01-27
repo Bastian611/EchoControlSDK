@@ -92,6 +92,7 @@ public:
     void post(Event_Ptr& e);
     Event_Ptr peek();
     Event_Ptr pop();
+    Event_Ptr pop(int timeout_ms);
 
     size_t size() const;
     size_t maxSize() const;

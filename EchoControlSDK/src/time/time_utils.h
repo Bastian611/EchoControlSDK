@@ -69,5 +69,10 @@ inline str stringNow(float tz, const char* fmt)
     return stringTime(now(tz).toTM(), fmt);
 }
 
+inline u64 getTickCountMs()
+{
+    return cpuCounter() * 1000 / cpuFrequency();
+}
+
 
 ECCS_END

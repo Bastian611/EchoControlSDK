@@ -151,34 +151,46 @@ void DeviceBase::SetState(DevState newState, int errCode)
     // LOG_DEBUG("[Slot %d] State Changed: %s", m_slotID, DevStateToStr(newState));
 }
 
-void DeviceBase::run() {
+void DeviceBase::run() 
+{
+    DateTime lastCheckTime = now();
+
     while (m_state == TS_RUNNING) {
-        Event_Ptr e = m_eq.pop();
-        if (!e) continue;
+        Event_Ptr e = m_eq.pop(500);
+        if (e){
+            if (e->eId() == EventTypes::Quit) 
+                break;
 
-        if (e->eId() == EventTypes::Quit) break;
-
-        // Packet 事件
-        if (e->eId() == DeviceEventID::PacketArrival) {
-            auto pe = std::dynamic_pointer_cast<PacketEvent>(e);
-            if (!pe && !pe->GetPacket())
-                continue;
-
-            // 状态拦截
-            if (!IsStateOnline(m_devState)) {
-                LOG_WARNING(
-                    "[Slot %d] Packet rejected in state: %s",
-                    m_slotID,
-                    DevStateToStr(m_devState)
-                );
-                continue;
+            // Packet 事件
+            if (e->eId() == DeviceEventID::PacketArrival) {
+                auto pe = std::dynamic_pointer_cast<PacketEvent>(e);
+                if (pe && pe->GetPacket()) {
+                    // 只有在线或工作中才处理业务包
+                    if (IsStateOnline(m_devState)) {
+                        EchoControlHandler::Instance().Dispatch(this, pe->GetPacket());
+                    }
+                    else {
+                        LOG_WARNING("[Slot %d] Packet rejected: Device is %s",
+                            m_slotID, DevStateToStr(m_devState));
+                    }
+                }
             }
-
-            // 调用单例 Handler 进行分发
-            EchoControlHandler::Instance().Dispatch(this, pe->GetPacket());
+            OnCustomEvent(e);
         }
 
-        OnCustomEvent(e);
+        // 定期检查状态机
+        DateTime currentTime = now();
+        if (currentTime - lastCheckTime > 5.0) { // 每 5 秒巡检一次
+            lastCheckTime = currentTime;
+
+            if (m_devState == STATE_OFFLINE || m_devState == STATE_ERROR) {
+                LOG_INFO("[Slot %d] Connection lost, attempting auto-recovery...", m_slotID);
+                // 子类实现的虚函数，内部处理 Socket 关闭与重新 Open
+                if (Reconnect()) {
+                    LOG_INFO("[Slot %d] Recovery successful!", m_slotID);
+                }
+            }
+        }
     }
 }
 

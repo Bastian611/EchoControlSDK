@@ -47,6 +47,20 @@ Event_Ptr EventQueue::pop()
     m_qEvents.pop_front();
     return e;
 }
+Event_Ptr EventQueue::pop(int timeout_ms)
+{
+    // 使用信号量的 wait_for
+    if (!m_sem.wait_for(ECCS_C11 chrono::milliseconds(timeout_ms))) {
+        return nullptr; // 超时返回空
+    }
+
+    SMART_LOCK(m_queueLcok);
+    if (m_qEvents.empty()) return nullptr;
+
+    auto e = m_qEvents.front();
+    m_qEvents.pop_front();
+    return e;
+}
 
 size_t EventQueue::size() const
 {

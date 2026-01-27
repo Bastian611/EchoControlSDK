@@ -130,6 +130,8 @@ protected:
     virtual void OnStateEnter(DevState state);
     virtual void OnStateExit(DevState state);
 
+    virtual bool Reconnect() { return false; } // 子类重写，比如重新调用驱动的 Connect()
+
 private:
     // 读取线程函数
     void ReadLoop();
