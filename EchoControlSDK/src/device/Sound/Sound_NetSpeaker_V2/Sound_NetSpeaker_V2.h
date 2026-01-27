@@ -76,7 +76,7 @@ protected:
     bool Connect();
     void Disconnect();
 
-    void SendJsonCmd(const str& json);
+    bool SendJsonCmd(const str& json, int timeout_ms = 2000);
     str  BuildJson(const char* cmd, const char* params = nullptr);
     void CtrlRxLoop();
     void HandleJsonReply(const str& json);
@@ -96,6 +96,8 @@ protected:
     bool QueryAudioList();          // 获取音频列表
     bool SyncConfigFromDevice();    // 写入 config
     bool SyncConfigToDevice();      // 应用 config
+
+    void UpdateAudioSpec(SoundStatus mode);
 
 private:
     // =================================================
@@ -127,6 +129,11 @@ private:
     std::thread* m_audioRxThread{ nullptr };
     std::atomic<bool>  m_keepAudioRx{ false };
 
+    // 动态端口相关
+    std::atomic<int> m_txTargetPort{ 8999 }; // 目标设备端口：PCM=8999, MP3=9888
+    std::atomic<int> m_rxLocalPort{ 11200 }; // 本地绑定端口：用于接收设备发回的音频
+    std::atomic<AudioSpec> m_currentSpec;
+
     // =================================================
     // 心跳
     // =================================================
@@ -144,6 +151,10 @@ private:
     u8                m_playVolume{ 0 };
     u8                m_captureVolume{ 0 };
     std::vector<SoundFileInfo>  m_audioList;
+
+    Semaphore m_ackSem;
+    std::atomic<int> m_waitingCseq{ -1 }; // 正在等待回复的序列号
+    bool m_lastAckResult{ false };   // 暂存回复结果
 };
 
 ECCS_END

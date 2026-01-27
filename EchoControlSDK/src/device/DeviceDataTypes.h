@@ -48,4 +48,11 @@ struct JsonValue
     std::vector<JsonValue> arrayVal;
     bool isArray{ false };
 };
+
+// 音频发送参数控制
+struct AudioSpec {
+    size_t chunkSize; // 每一包发送的大小
+    int intervalMs;   // 网线直连下建议设为很小（如 1-5ms）或 0
+};
+
 ECCS_END

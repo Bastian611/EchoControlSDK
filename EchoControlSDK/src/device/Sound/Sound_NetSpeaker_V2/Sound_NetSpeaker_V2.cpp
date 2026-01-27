@@ -71,6 +71,8 @@ bool Sound_NetSpeaker_V2::SetSoundMode(SoundStatus mode)
     if (!IsOnline())
         return false;
 
+    UpdateAudioSpec(mode);
+
     const char* model = "idle";
     switch (mode)
     {
@@ -80,12 +82,13 @@ bool Sound_NetSpeaker_V2::SetSoundMode(SoundStatus mode)
     case SoundStatus::MicBroadcast: model = "mic_broadcast"; break;
     }
 
-    char param[64];
-    snprintf(param, sizeof(param), "\"model\":\"%s\"", model);
-    SendJsonCmd(BuildJson("model_change", param));
+    char param[128];
+    snprintf(param, sizeof(param), "\"model\":\"%s\",\"caller_port\":\"%d\"",
+        model, m_rxLocalPort.load());
+    bool ret = SendJsonCmd(BuildJson("model_change", param));
 
     m_soundMode = mode;
-    return true;
+    return ret;
 }
 
 SoundStatus Sound_NetSpeaker_V2::GetSoundMode() const
@@ -230,11 +233,13 @@ ECCS_Error Sound_NetSpeaker_V2::PushAudio(const u8* data, u32 len)
     if (m_soundMode != SoundStatus::MicBroadcast)
         return ECCS_ERR_DEV_BUSY;
 
-    if (m_audioTxBuf) {
-        m_audioTxBuf->Write(data, len);
-    }
-    else {
-        return ECCS_ERR_MALLOC;
+    if (!m_audioTxBuf) 
+        return ECCS_ERR_NOT_INIT;
+
+    // 如果写入失败（缓冲区满），返回特定的忙错误，让应用层知道推流太快了
+    size_t written = m_audioTxBuf->Write(data, len);
+    if (written < len) {
+        return ECCS_ERR_DEV_BUSY; 
     }
 
     return ECCS_SUCCESS;
@@ -355,6 +360,7 @@ str Sound_NetSpeaker_V2::BuildJson(const char* cmd, const char* params)
 {
     char buf[512];
     int seq = ++m_cseq;
+    m_waitingCseq = seq;
 
     if (params)
         snprintf(buf, sizeof(buf),
@@ -368,19 +374,30 @@ str Sound_NetSpeaker_V2::BuildJson(const char* cmd, const char* params)
     return str(buf);
 }
 
-void Sound_NetSpeaker_V2::SendJsonCmd(const str& json)
+bool Sound_NetSpeaker_V2::SendJsonCmd(const str& json, int timeout_ms)
 {
     if (!Connect())
-        return;
+        return false;
 
     try
     {
+        m_ackSem.try_wait(); // 确保信号量处于 0 状态
         m_ctrlSocket->write((const u8*)json.c_str(), json.size());
+        
+        // 等待信号量，超时时间由参数决定
+        if (m_ackSem.wait_for(ECCS_C11 chrono::milliseconds(timeout_ms))) {
+            return m_lastAckResult; // 被 HandleJsonReply 唤醒，返回结果
+        }
+        else {
+            LOG_WARNING("[NetSpeaker] Command timeout (cseq: %d)", m_waitingCseq.load());
+            return false; // 超时
+        }
     }
     catch (...)
     {
         SetState(STATE_ERROR);
         m_ctrlSocket->close();
+        return false;
     }
 }
 
@@ -453,11 +470,42 @@ static bool ExtractInt(const str& src, const char* key, int& out)
 
 void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
 {
-    LOG_DEBUG("[NetSpeaker] RX: %s", json.c_str());
+    LOG_DEBUG("[NetSpeaker] recv: %s", json.c_str());
 
-    str cmd;
-    if (!ExtractStr(json, "command", cmd))
-        return;
+    str cmd, code;
+    if (!ExtractStr(json, "command", cmd)) return;
+
+    // 检查是否有 code 回复
+    if (ExtractStr(json, "code", code)) {
+        int receivedCseq = -1;
+        ExtractInt(json, "cseq", receivedCseq);
+
+        if (receivedCseq == m_waitingCseq.load()) {
+            m_lastAckResult = (code == "200");
+            m_ackSem.notify(); // 唤醒主线程
+        }
+        if (code == "200") {
+            LOG_INFO("[NetSpeaker] Command Success Confirmed");
+            // 根据当前正在进行的模式更新状态
+            if (m_soundMode == SoundStatus::Player || m_soundMode == SoundStatus::OneKey) {
+                SetState(STATE_WORKING); 
+            }
+            else if (m_soundMode == SoundStatus::Idle) {
+                SetState(STATE_ONLINE); 
+            }
+
+            // 触发用户回调
+            rpc::DeviceStatus ds;
+            ds.state = GetState();
+            ds.deviceID = m_deviceID.Value();
+            auto pkt = std::make_shared<rpc::OwDeviceStatus>(ds);
+            if (m_statusCb) m_statusCb(pkt);
+        }
+        else if (code == "400") {
+            LOG_ERROR("[NetSpeaker] Command %s rejected by device (Code 400)", cmd.c_str());
+            SetState(STATE_ERROR, 400);
+        }
+    }
 
     // ---------- 状态 ----------
     if (cmd == "post_status")
@@ -543,34 +591,70 @@ void Sound_NetSpeaker_V2::HeartbeatLoop()
 
 void Sound_NetSpeaker_V2::AudioTxLoop()
 {
-    UdpSocket udp(m_ip, 9888);
+    int targetPort = m_txTargetPort.load();
+    UdpSocket udp(m_ip, targetPort);
     try { udp.open(); }
     catch (...) { return; }
 
-    u8 buf[1024];
+    u8 buf[2048];
 
     while (m_keepAudioTx)
     {
-        int len = m_audioTxBuf->Read(buf, sizeof(buf));
-        if (len > 0)
-            udp.write(buf, len);
-        else
-            msleep(10);
+        // 如果目标端口变了（模式切换），需要重新开启 Socket
+        if (targetPort != m_txTargetPort.load()) {
+            targetPort = m_txTargetPort.load();
+            udp.close();
+            udp.setRemoteAddr(m_ip, targetPort, false);
+            udp.open();
+        }
+
+        size_t available = m_audioTxBuf->Available();
+        size_t triggerSize = m_currentSpec.chunkSize;
+
+        if (available >= triggerSize)
+        {
+            int len = m_audioTxBuf->Read(buf, triggerSize);
+            if (len > 0) {
+                udp.write(buf, len);
+                // 网线直连下，仅做极微小休眠防止 CPU 100%
+                // 具体的发送节奏由应用层往 RingBuffer 写的速度决定
+                msleep(m_currentSpec.intervalMs);
+            }
+        }
+        else {
+            msleep(10); // 缓冲区没数据，等一下
+        }
     }
 }
 
 void Sound_NetSpeaker_V2::AudioRxLoop()
 {
-    UdpSocket udp(9889);
-    try { udp.open(); }
-    catch (...) { return; }
+    int port = m_rxLocalPort.load();
+    UdpSocket udp(port);
+    try { 
+        udp.open(); 
+        LOG_INFO("[NetSpeaker] Audio Rx listening on UDP port: %d", port);
+    }catch (...) { 
+        LOG_ERROR("[NetSpeaker] Failed to bind UDP port: %d", port);
+        return; 
+    }
 
-    u8 buf[1024];
+    u8 buf[2048];
     while (m_keepAudioRx)
     {
-        int len = udp.read(buf, sizeof(buf));
-        if (len > 0)
-            NotifyAudioCapture(buf, len);
+        // 如果本地端口需要变更，跳出循环重建
+        if (m_rxLocalPort.load() != port) break;
+
+        // 设置一个较短的超时，以便能及时响应 m_keepAudioRx 的退出标记
+        try {
+            int len = udp.read(buf, sizeof(buf));
+            if (len > 0) {
+                NotifyAudioCapture(buf, len); // 触发回调到用户
+            }
+        }
+        catch (...) {
+            msleep(10);
+        }
     }
 }
 
@@ -608,6 +692,18 @@ bool Sound_NetSpeaker_V2::SyncConfigToDevice()
     SetPlayVolume(m_playVolume);
     SetCaptureVolume(m_captureVolume);
     return true;
+}
+
+void Sound_NetSpeaker_V2::UpdateAudioSpec(SoundStatus mode)
+{
+    if (mode == SoundStatus::MicBroadcast) {
+        m_txTargetPort = 8999;     // 协议：PCM 喊话走 8999
+        m_currentSpec = { 640, 5 }; // PCM 16k 建议帧大小
+    }
+    else if (mode == SoundStatus::Player) { // 假设此处对应 MP3 流播放模式
+        m_txTargetPort = 9888;      // 协议：MP3 流播放走 9888
+        m_currentSpec = { 1024, 2 }; // MP3 44.1k 数据块可以稍大
+    }
 }
 
 ECCS_END
