@@ -55,4 +55,22 @@ struct AudioSpec {
     int intervalMs;   // 网线直连下建议设为很小（如 1-5ms）或 0
 };
 
+// RGB V3工作模式
+enum RGB_V3_LightMode : u8 {
+    Off = 1,        // 不出光
+    Blingding = 2,  // 炫目模式
+    Lighting = 3    // 照明模式
+};
+
+// 调焦参数
+enum RGB_V3_FocusType : u8 {
+    Distance = 1,
+    Angle = 2,
+    StepAdd = 3,
+    StepSub = 4,
+    AutoCont = 5,
+    AutoSingle = 6,
+    Manual = 7
+};
+
 ECCS_END

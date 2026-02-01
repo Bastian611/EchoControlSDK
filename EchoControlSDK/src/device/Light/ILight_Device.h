@@ -7,15 +7,33 @@ ECCS_BEGIN
 class ILight_Device : public DeviceBase
 {
 public:
-    // === 纯虚接口：由具体驱动实现 ===
-    virtual void SetSwitch(bool isOpen) = 0;
-    virtual void SetBrightness(u8 level) = 0;
+    
+    virtual ECCS_Error SetLightSwitch(bool isOpen) = 0;
+    virtual ECCS_Error SetLightLevel(u8 power) {
+        LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
+            m_slotID, GetProperty("Model").c_str());
+    }
+    virtual ECCS_Error SetFlashFreq(u8 hz) {
+        LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
+            m_slotID, GetProperty("Model").c_str());
+    }
+    virtual ECCS_Error SetBrightness(u8 level) {
+        LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
+            m_slotID, GetProperty("Model").c_str());
+    }
+    virtual ECCS_Error SetWorkMode(RGB_V3_LightMode mode) {
+        LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
+            m_slotID, GetProperty("Model").c_str());
+    }
+    virtual ECCS_Error SetFocus(RGB_V3_FocusType type, u16 value) {
+        LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
+            m_slotID, GetProperty("Model").c_str());
+    }
     /**
      * @brief 设置频闪 (扩展功能)
      * @param isOpen true=开启频闪, false=关闭
-     * @note 默认实现为不支持。如果设备支持频闪，请在子类中重写此函数。
      */
-    virtual void SetStrobe(bool isOpen) {
+    virtual ECCS_Error SetStrobe(bool isOpen) {
         LOG_WARNING("[Slot %d] Device (Model: %s) does not support Strobe.",
             m_slotID, GetProperty("Model").c_str());
     }

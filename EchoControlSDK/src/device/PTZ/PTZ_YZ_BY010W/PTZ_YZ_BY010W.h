@@ -19,16 +19,34 @@ public:
     PTZ_YZ_BY010W();
     virtual ~PTZ_YZ_BY010W();
 
-    virtual bool Init(int slotID, const std::map<str, str>& config) override;
+    // 生命周期
+    virtual ECCS_Error Init(int slotID, const std::map<str, str>& config) override;
+    virtual ECCS_Error Start() override;
+    virtual ECCS_Error Stop() override;
+    virtual bool Reconnect() override;
 
 public:
-    virtual void PtzMove(u8 action, u8 speed) override;
-    virtual void PtzStop() override;
-    virtual void PtzPreset(u8 action, u8 index) override;
+    // 业务接口
+    virtual ECCS_Error PtzMove(u8 action, u8 speed) override;
+    virtual ECCS_Error PtzStop() override;
+    virtual ECCS_Error PtzPreset(u8 action, u8 index) override;
+    virtual ECCS_Error PtzReset() override;
+    virtual ECCS_Error PtzSetAbsolutePos(float pan, float tilt) override;
+    virtual ECCS_Error PtzQueryPosition() override;
+    virtual ECCS_Error PtzZoom(bool isZoomIn) override;
+
+    // --- 线扫角度设置
+    virtual ECCS_Error PtzSetScanRange(float startAngle, float endAngle) = 0;
+    // --- 启动线扫 ---
+    ECCS_Error PTZ_YZ_BY010W::PtzStartScan() override;
+    // --- 停止线扫 ---
+    ECCS_Error PTZ_YZ_BY010W::PtzStopScan() override;
 
 private:
-    void SendPelcoD(u8 cmd1, u8 cmd2, u8 d1, u8 d2);
+    ECCS_Error SendPelcoD(u8 cmd1, u8 cmd2, u8 d1, u8 d2);
     bool Connect();
+    // 辅助：解析角度包
+    void ParseResponse(const u8* data);
 
 protected:
     // 实现基类的 IO 接口
@@ -37,19 +55,16 @@ protected:
     // 实现协议解析
     virtual void OnRawDataReceived(const u8* data, u32 len) override;
 
-    // 覆盖 Start/Stop 以启动读取线程
-    virtual bool Start() override;
-    virtual void Stop() override;
-
-private:
-    // 辅助：解析角度包
-    void ParsePelcoResponse(const u8* data, u32 len);
-
 private:
     str m_ip;
     int m_port;
     u8  m_addr;
     TcpSocket_Ptr m_socket;
+
+    // 状态记录
+    std::atomic<float> m_lastPan{ 0.0f };
+    std::atomic<float> m_lastTilt{ 0.0f };
+    std::vector<u8> m_recvBuf;
 };
 
 ECCS_END

@@ -10,9 +10,9 @@ Light_HL_525_4W::~Light_HL_525_4W() {
     if (m_socket) m_socket->close();
 }
 
-bool Light_HL_525_4W::Init(int slotID, const std::map<str, str>& config) {
+ECCS_Error Light_HL_525_4W::Init(int slotID, const std::map<str, str>& config) {
     // 基类初始化
-    if (!DeviceBase::Init(slotID, config)) return false;
+    if (!DeviceBase::Init(slotID, config)) return ECCS_ERR_NOT_INIT;
 
     // 获取配置
     m_ip = GetPropValue<str>("IP");
@@ -23,27 +23,27 @@ bool Light_HL_525_4W::Init(int slotID, const std::map<str, str>& config) {
         // 注意：这里返回 true，允许线程启动，以便在线程里重连
     }
 
-    return true;
+    return ECCS_SUCCESS;
 }
 
-void Light_HL_525_4W::SetSwitch(bool isOpen) {
+ECCS_Error Light_HL_525_4W::SetLightSwitch(bool isOpen) {
     // 0x1F:开, 0x2F:关
-    SendHexCmd(isOpen ? 0x1F : 0x2F, 0x00, 0x00);
+    return SendHexCmd(isOpen ? 0x1F : 0x2F, 0x00, 0x00);
 }
 
-void Light_HL_525_4W::SetBrightness(u8 level) {
+ECCS_Error Light_HL_525_4W::SetBrightness(u8 level) {
     // 0x9F: 调节电流
     u16 current = (u16)level * 255 / 100;
-    SendHexCmd(0x9F, (current >> 8) & 0xFF, current & 0xFF);
+    return SendHexCmd(0x9F, (current >> 8) & 0xFF, current & 0xFF);
 }
 
-void Light_HL_525_4W::SetStrobe(bool isOpen) {
+ECCS_Error Light_HL_525_4W::SetStrobe(bool isOpen) {
     // 0x3F: 开闪烁, 0x4F: 关闪烁
-    SendHexCmd(isOpen ? 0x3F : 0x4F, 0x00, 0x00);
+    return SendHexCmd(isOpen ? 0x3F : 0x4F, 0x00, 0x00);
 }
 
-void Light_HL_525_4W::SendHexCmd(u8 cmd, u8 vh, u8 vl) {
-    if (!Connect()) return;
+ECCS_Error Light_HL_525_4W::SendHexCmd(u8 cmd, u8 vh, u8 vl) {
+    if (!Connect()) return ECCS_ERR_DEV_OFFLINE;
 
     u8 buf[7];
     buf[0] = 0xFF; // Header
@@ -60,11 +60,13 @@ void Light_HL_525_4W::SendHexCmd(u8 cmd, u8 vh, u8 vl) {
 
     try {
         m_socket->write(buf, 7);
+        return ECCS_SUCCESS;
     }
     catch (std::exception& e) {
         LOG_ERROR("[Slot %d] Send failed: %s", m_slotID, e.what());
         SetState(STATE_ERROR, 101);
         m_socket->close();
+        return ECCS_ERR_DEV_SEND_FAILED;
     }
 }
 

@@ -19,17 +19,16 @@ public:
     virtual ~Light_HL_525_4W();
 
     // 覆盖初始化
-    virtual bool Init(int slotID, const std::map<str, str>& config) override;
+    virtual ECCS_Error Init(int slotID, const std::map<str, str>& config) override;
 
 public:
-    // --- 实现 ILight_Device 的纯虚接口 ---
-    virtual void SetSwitch(bool isOpen) override;
-    virtual void SetBrightness(u8 level) override;
-    virtual void SetStrobe(bool isOpen) override;
+    virtual ECCS_Error SetLightSwitch(bool isOpen) override;
+    virtual ECCS_Error SetBrightness(u8 level) override;
+    virtual ECCS_Error SetStrobe(bool isOpen) override;
 
 private:
     // 私有辅助方法
-    void SendHexCmd(u8 cmd, u8 vh, u8 vl);
+    ECCS_Error SendHexCmd(u8 cmd, u8 vh, u8 vl);
     bool Connect();
 
 private:

@@ -4,6 +4,8 @@
 
 // 引入具体设备头文件
 #include "Light/Light_HL_525_4W/Light_HL_525_4W.h"
+#include "Light/Light_Green_Small/Light_Green_Small.h"
+#include "Light/Light_RGB_V3/Light_RGB_V3.h"
 #include "PTZ/PTZ_YZ_BY010W/PTZ_YZ_BY010W.h"
 #include "Sound/Sound_NetSpeaker_V2/Sound_NetSpeaker_V2.h"
 #include "Ultrasonic/Ultrasonic_TAS_IO_428R2/Ultrasonic_TAS_IO_428R2.h"
@@ -23,6 +25,8 @@ void InitModelMapping() {
 
     // Light
     g_ModelToIDMap["HL-525"] = Light_HL_525_4W::ID;
+    g_ModelToIDMap["Green-Small"] = Light_Green_Small::ID;
+    g_ModelToIDMap["RGB-V3"] = Light_RGB_V3::ID;
 
     // PTZ
     g_ModelToIDMap["YZ-BY010W"] = PTZ_YZ_BY010W::ID;
@@ -49,6 +53,8 @@ FACTORY_BEGIN(u32, DeviceBase)
 
 // 使用具体类的 ID 常量进行注册
 FACTORY_APPEND(Light_HL_525_4W::ID,         Light_HL_525_4W,            DeviceBase)
+FACTORY_APPEND(Light_Green_Small::ID,       Light_Green_Small,          DeviceBase)
+FACTORY_APPEND(Light_RGB_V3::ID,            Light_RGB_V3,               DeviceBase)
 
 
 FACTORY_APPEND(PTZ_YZ_BY010W::ID,           PTZ_YZ_BY010W,              DeviceBase)

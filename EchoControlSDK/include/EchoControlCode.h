@@ -26,6 +26,8 @@ enum ECCS_Error {
     ECCS_ERR_DEV_TYPE_MISMATCH = 103, // 设备类型不匹配 (如给灯发云台指令)
     ECCS_ERR_DEV_SEND_FAILED = 104, // 网络/串口发送失败
 
+    ECCS_ERR_DEV_LIGHT_CLOSE = 120, // 灯光未开启（需开启灯光后再开启频闪）
+
     // === 配置与文件 (200 - 299) ===
     ECCS_ERR_CFG_LOAD_FAILED = 200, // 配置文件加载失败 (路径错误或格式错误)
     ECCS_ERR_CFG_WRITE_FAILED = 201, // 配置文件写入失败

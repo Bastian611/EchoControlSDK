@@ -30,7 +30,9 @@ namespace did {
     {
         LIGHT_UNKNOWN = 0,
         LIGHT_PT_LD_1307 = 1,
-        LIGHT_HL_525_4W = 2
+        LIGHT_HL_525_4W = 2,
+        LIGHT_RGB_V3 = 3,
+        LIGHT_GREEN_SMALL = 4
     };
 
     enum SoundModel

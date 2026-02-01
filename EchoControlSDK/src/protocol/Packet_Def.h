@@ -44,17 +44,36 @@ namespace rpc {
         char filename[128]; // 播放文件
         u8 loop;            // 1=循环
     };
-    struct SoundTTSCtrl { char text[256]; };   // TTS
-    struct SoundVolCtrl { u8 volume; };        // 音量
+    struct SoundTTSCtrl { 
+        char text[256]; 
+    };   // TTS
+    struct SoundVolCtrl {
+        u8 volume; 
+    };        // 音量
 
     // ---------------- PTZ Data ------------------
-    struct PtzMotion { u8 action; u8 speed; }; // 上下左右
-    struct PtzPreset { u8 action; u8 index; }; // 增删调预置位
-    struct PtzPosition { float pan; float tilt; float zoom; }; // 角度信息
+    struct PtzMotion { 
+        u8 action; 
+        u8 speed; 
+    }; // 上下左右
+    struct PtzPreset { 
+        u8 action; 
+        u8 index; 
+    }; // 增删调预置位
+    struct PtzPosition { 
+        float pan; 
+        float tilt; 
+        float zoom; 
+    }; // 角度信息
 
     // ---------------- Setting Data --------------
-    struct NetConfig { char ip[32]; u16 port; };
-    struct DevName { char name[64]; };
+    struct NetConfig { 
+        char ip[32];
+        u16 port; 
+    };
+    struct DevName {
+        char name[64]; 
+    };
 
     // ---------------- Ultrasonic Data ----------------
     struct UltrasonicSwitch {
