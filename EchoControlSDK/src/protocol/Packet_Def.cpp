@@ -22,6 +22,10 @@ namespace rpc {
         FACTORY_ID_APPEND(RpLightLevel, RpcPacket)
         FACTORY_ID_APPEND(RqLightStrobe, RpcPacket)
         FACTORY_ID_APPEND(RpLightStrobe, RpcPacket)
+        FACTORY_ID_APPEND(RqLightWorkMode, RpcPacket)
+        FACTORY_ID_APPEND(RpLightWorkMode, RpcPacket)
+        FACTORY_ID_APPEND(RqLightFocus, RpcPacket)
+        FACTORY_ID_APPEND(RpLightFocus, RpcPacket)
 
         // --- Sound Control ---
         FACTORY_ID_APPEND(RqSoundPlay, RpcPacket)
@@ -32,6 +36,10 @@ namespace rpc {
         FACTORY_ID_APPEND(RpSoundTTS, RpcPacket)
         FACTORY_ID_APPEND(RqSoundMic, RpcPacket)
         FACTORY_ID_APPEND(RpSoundMic, RpcPacket)
+        FACTORY_ID_APPEND(RqSoundPlayIndex, RpcPacket)
+        FACTORY_ID_APPEND(RpSoundPlayIndex, RpcPacket)
+        FACTORY_ID_APPEND(RqSoundOneKey, RpcPacket)
+        FACTORY_ID_APPEND(RpSoundOneKey, RpcPacket)
 
         // --- PTZ Control ---
         FACTORY_ID_APPEND(RqPtzMove, RpcPacket)
@@ -40,6 +48,14 @@ namespace rpc {
         FACTORY_ID_APPEND(RpPtzStop, RpcPacket)
         FACTORY_ID_APPEND(RqPtzPreset, RpcPacket)
         FACTORY_ID_APPEND(RpPtzPreset, RpcPacket)
+        FACTORY_ID_APPEND(RqPtzAbsolutePos, RpcPacket)
+        FACTORY_ID_APPEND(RpPtzAbsolutePos, RpcPacket)
+        FACTORY_ID_APPEND(RqPtzScanRange, RpcPacket)
+        FACTORY_ID_APPEND(RpPtzScanRange, RpcPacket)
+        FACTORY_ID_APPEND(RqPtzStartScan, RpcPacket)
+        FACTORY_ID_APPEND(RpPtzStartScan, RpcPacket)
+        FACTORY_ID_APPEND(RqPtzStopScan, RpcPacket)
+        FACTORY_ID_APPEND(RpPtzStopScan, RpcPacket)
 
         // --- Ultrasonic Control ---
         FACTORY_ID_APPEND(RqUltrasonicSwitch, RpcPacket)

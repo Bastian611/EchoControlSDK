@@ -39,38 +39,69 @@ namespace rpc {
         float temperature;
     };
 
+    struct LightWorkModeCtrl {
+        u8 mode; // 1:Off, 2:Dazzle, 3:Illumination
+    };
+
+    struct LightFocusCtrl {
+        u8 type;    // FocusType 枚举值
+        u16 value;  // 距离或角度参数
+    };
+
+
     // ---------------- Sound Data ----------------
     struct SoundPlayCtrl {
         char filename[128]; // 播放文件
         u8 loop;            // 1=循环
     };
+
     struct SoundTTSCtrl { 
         char text[256]; 
     };   // TTS
+
     struct SoundVolCtrl {
         u8 volume; 
     };        // 音量
+
+    struct SoundPlayIndexCtrl {
+        int index;
+        u8 loop;
+    };
 
     // ---------------- PTZ Data ------------------
     struct PtzMotion { 
         u8 action; 
         u8 speed; 
     }; // 上下左右
+
     struct PtzPreset { 
         u8 action; 
         u8 index; 
     }; // 增删调预置位
+
     struct PtzPosition { 
         float pan; 
         float tilt; 
         float zoom; 
     }; // 角度信息
 
+    struct PtzAbsolutePos {
+        float pan;
+        float tilt;
+    };
+
+    struct PtzScanRange {
+        float startAngle;
+        float endAngle;
+    };
+
+
     // ---------------- Setting Data --------------
     struct NetConfig { 
         char ip[32];
         u16 port; 
     };
+
     struct DevName {
         char name[64]; 
     };
@@ -80,7 +111,7 @@ namespace rpc {
         u8 channel; // 0=All, 1=Channel1...
         u8 isOpen;
     };
-
+    
 #pragma pack(pop)
 
 
@@ -103,6 +134,12 @@ namespace rpc {
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 3), bool>      RqLightStrobe;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 3), Result>    RpLightStrobe;
 
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 4), LightWorkModeCtrl> RqLightWorkMode;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 4), Result>            RpLightWorkMode;
+
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 5), LightFocusCtrl>    RqLightFocus;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 5), Result>            RpLightFocus;
+
     // --- Sound Control ---
     // 播放文件
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 1), SoundPlayCtrl> RqSoundPlay;
@@ -117,6 +154,12 @@ namespace rpc {
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 4), bool>      RqSoundMic;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 4), Result>    RpSoundMic;
 
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 5), SoundPlayIndexCtrl> RqSoundPlayIndex;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 5), Result>             RpSoundPlayIndex;
+
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 6), int>                RqSoundOneKey;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 6), Result>             RpSoundOneKey;
+
     // --- PTZ Control ---
     // 移动
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 1), PtzMotion> RqPtzMove;
@@ -127,6 +170,18 @@ namespace rpc {
     // 预置位
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 3), PtzPreset>   RqPtzPreset;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 3), Result>      RpPtzPreset;
+
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 4), PtzAbsolutePos>      RqPtzAbsolutePos;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 4), Result>              RpPtzAbsolutePos;
+
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 5), PtzScanRange>        RqPtzScanRange;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 5), Result>              RpPtzScanRange;
+
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 6), NoneData>            RqPtzStartScan;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 6), Result>              RpPtzStartScan;
+
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 7), NoneData>            RqPtzStopScan;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 7), Result>              RpPtzStopScan;
 
     // 继电器控制
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_ULTRASONIC, 1), UltrasonicSwitch>  RqUltrasonicSwitch;
