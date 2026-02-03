@@ -3,6 +3,7 @@
 #include "Packet_ID.h"
 #include "../device/DeviceID.h"
 #include "../device/DeviceState.h"
+#include "../device/DeviceDataTypes.h"
 
 ECCS_BEGIN
 namespace rpc {
@@ -14,7 +15,7 @@ namespace rpc {
     // =============================================================
 #pragma pack(push, 1)
 
-// 通用结果返回
+    // 通用结果返回
     struct Result {
         u32 code;     // 0=Success
         char msg[64];
@@ -22,11 +23,9 @@ namespace rpc {
 
     // 通用设备状态数据
     struct DeviceStatus {
-        u32 deviceID;       // DeviceID Value
-        u8  slotID;         // Slot Index
-
-        u8  state;          // Value from enum DevState
-
+        u8 deviceType;
+        u8 deviceIndex;         
+        u8 state;           // Value from enum DevState
         u32 errorCode;      // 错误码
         float temperature;  // 温度
     };
@@ -39,33 +38,43 @@ namespace rpc {
         float temperature;
     };
 
-    struct LightWorkModeCtrl {
-        u8 mode; // 1:Off, 2:Dazzle, 3:Illumination
-    };
-
-    struct LightFocusCtrl {
+    struct LightFocus {
         u8 type;    // FocusType 枚举值
         u16 value;  // 距离或角度参数
     };
 
+    // 强光实时参数 (针对 RGB_V3 的 18 字节回传)
+    struct LightRTParam {
+        u8  mode;           // 当前工作模式 (1,2,3)
+        u8  power;          // 当前功率档位
+        float actualAngle;  // 调焦后的实际角度 (10倍换算后)
+        u16 motorSteps;     // 电机实际步数
+    };
+
 
     // ---------------- Sound Data ----------------
-    struct SoundPlayCtrl {
+    struct SoundPlayFile {
         char filename[128]; // 播放文件
         u8 loop;            // 1=循环
     };
 
-    struct SoundTTSCtrl { 
-        char text[256]; 
-    };   // TTS
-
-    struct SoundVolCtrl {
-        u8 volume; 
-    };        // 音量
-
     struct SoundPlayIndex {
         int index;
         u8 loop;
+    };
+
+    struct SoundAudioList {
+        u16 count;
+        struct {
+            int index;
+            char name[64]; // 文件名简写
+        } files[200]; 
+    };
+
+    // 强声播放进度/状态
+    struct SoundPlayStatusData {
+        int currentIndex;   // 当前播放的索引
+        u8  playState;      // 对应 SoundPlayState 枚举: Playing, Finished, Error
     };
 
     // ---------------- PTZ Data ------------------
@@ -82,17 +91,12 @@ namespace rpc {
     struct PtzPosition { 
         float pan; 
         float tilt; 
-        float zoom; 
+        float zoom;
     }; // 角度信息
 
-    struct PtzAbsolutePos {
-        float pan;
-        float tilt;
-    };
-
     struct PtzScanRange {
-        float startAngle;
-        float endAngle;
+        float start;
+        float end;
     };
 
 
@@ -128,60 +132,60 @@ namespace rpc {
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 1), bool>      RqLightSwitch;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 1), Result>    RpLightSwitch;
     // 亮度
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 2), u8>        RqLightLevel;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 2), Result>    RpLightLevel;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 2), u8>        RqLightWorkMode;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 2), Result>    RpLightWorkMode;
     // 频闪
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 3), bool>      RqLightStrobe;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 3), Result>    RpLightStrobe;
 
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 4), LightWorkModeCtrl> RqLightWorkMode;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 4), Result>            RpLightWorkMode;
-
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 5), LightFocusCtrl>    RqLightFocus;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 5), Result>            RpLightFocus;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_LIGHT, 4), LightFocus>    RqLightFocus;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_LIGHT, 4), Result>        RpLightFocus;
 
     // --- Sound Control ---
     // 播放文件
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 1), SoundPlayCtrl> RqSoundPlay;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 1), Result>        RpSoundPlay;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 1), SoundPlayFile> RqSoundPlayFile;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 1), Result>        RpSoundPlayFile;
+    // 按索引播放
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 2), SoundPlayIndex> RqSoundPlayIndex;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 2), Result>         RpSoundPlayIndex;
     // 停止
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 2), NoneData>  RqSoundStop;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 2), Result>    RpSoundStop;
-    // TTS
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 3), SoundTTSCtrl>  RqSoundTTS;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 3), Result>        RpSoundTTS;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 3), NoneData>  RqSoundStop;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 3), Result>    RpSoundStop;
+    // 上一曲
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 4), NoneData>  RqSoundPrev;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 4), Result>    RpSoundPrev;
+    // 下一曲
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 5), NoneData>  RqSoundNext;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 5), Result>    RpSoundNext;
+    // 一键驱散
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 6), int>       RqSoundOneKey;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 6), Result>    RpSoundOneKey;
     // 喊话
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 4), bool>      RqSoundMic;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 4), Result>    RpSoundMic;
-
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 5), SoundPlayIndex> RqSoundPlayIndex;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 5), Result>         RpSoundPlayIndex;
-
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 6), int>                RqSoundOneKey;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 6), Result>             RpSoundOneKey;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 7), bool>      RqSoundMicSwitch;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 7), Result>    RpSoundMicSwitch;
 
     // --- PTZ Control ---
     // 移动
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 1), PtzMotion> RqPtzMove;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 1), Result>    RpPtzMove;
     // 停止
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 2), NoneData>  RqPtzStop;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 2), Result>    RpPtzStop;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 2), NoneData> RqPtzStop;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 2), Result>   RpPtzStop;
     // 预置位
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 3), PtzPreset>   RqPtzPreset;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 3), Result>      RpPtzPreset;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 3), PtzPreset> RqPtzPreset;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 3), Result>    RpPtzPreset;
 
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 4), PtzAbsolutePos>      RqPtzAbsolutePos;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 4), Result>              RpPtzAbsolutePos;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 4), NoneData>    RqPtzReset;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 4), Result>      RpPtzReset;
 
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 5), PtzScanRange>        RqPtzScanRange;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 5), Result>              RpPtzScanRange;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 5), PtzPosition> RqPtzAbsolutePos;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 5), Result>      RpPtzAbsolutePos;
 
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 6), NoneData>            RqPtzStartScan;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 6), Result>              RpPtzStartScan;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 6), NoneData> RqPtzStartScan;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 6), Result>   RpPtzStartScan;
 
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 7), NoneData>            RqPtzStopScan;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 7), Result>              RpPtzStopScan;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 7), NoneData> RqPtzStopScan;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_PTZ, 7), Result>   RpPtzStopScan;
 
     // 继电器控制
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_ULTRASONIC, 1), UltrasonicSwitch>  RqUltrasonicSwitch;
@@ -201,7 +205,14 @@ namespace rpc {
     typedef Packet<_APP_RP_QUERY_ID_(DEVICE_PTZ, 1), PtzPosition>     RpQueryPtzPos;
 
     // --- Sound Query ---
+    typedef Packet<_APP_RQ_QUERY_ID_(DEVICE_SOUND, 1), NoneData>        RqQueryAudioList;
+    typedef Packet<_APP_RP_QUERY_ID_(DEVICE_SOUND, 1), SoundAudioList>  RpQueryAudioList;
 
+    typedef Packet<_APP_RQ_QUERY_ID_(DEVICE_SOUND, 2), NoneData>    RqQueryCapVolume;
+    typedef Packet<_APP_RP_QUERY_ID_(DEVICE_SOUND, 2), u8>          RpQueryCapVolume;
+
+    typedef Packet<_APP_RQ_QUERY_ID_(DEVICE_SOUND, 3), NoneData>    RqQueryPlayVolume;
+    typedef Packet<_APP_RP_QUERY_ID_(DEVICE_SOUND, 3), u8>          RpQueryPlayVolume;
 
     // #############################################################
     // SETTING (参数配置)
@@ -217,31 +228,41 @@ namespace rpc {
 
     // --- Light Setting ---
 
+    // 功率档位
+    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_LIGHT, 1), u8>      RqSetLightLevel; 
+    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_LIGHT, 1), Result>  RpSetLightLevel;
+    // 频闪频率
+    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_LIGHT, 2), u8>      RqSetLightFlashFreq;  
+    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_LIGHT, 2), Result>  RpSetLightFlashFreq;
 
     // --- Sound Setting ---
 
     // 音量设置
-    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_SOUND, 1), SoundVolCtrl>  RqSetSoundVolume;
-    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_SOUND, 1), Result>        RpSetSoundVolume;
+    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_SOUND, 1), u8>        RqSetSoundCapVolume;
+    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_SOUND, 1), Result>    RpSetSoundCapVolume;
+
+    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_SOUND, 2), u8>        RqSetSoundPlayVolume;
+    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_SOUND, 2), Result>    RpSetSoundPlayVolume;
 
     // --- PTZ Setting ---
-
+    typedef Packet<_APP_RQ_SETTING_ID_(DEVICE_PTZ, 1), PtzScanRange>    RqSetPtzScanRange;
+    typedef Packet<_APP_RP_SETTING_ID_(DEVICE_PTZ, 1), Result>          RpSetPtzScanRange;
 
     // #############################################################
-    // ONEWAY (服务端主动推送)
+    // ONEWAY (主动推送)
     // #############################################################
 
-    // 强光状态变更推送
-    typedef Packet<_APP_OW_ID_(DEVICE_LIGHT, 1), LightStatus>  OwLightStatus;
-
-    // 强声播放结束推送
-    typedef Packet<_APP_OW_ID_(DEVICE_SOUND, 1), NoneData>     OwSoundPlayEnd;
-
-    // 云台位置实时回传
-    typedef Packet<_APP_OW_ID_(DEVICE_PTZ, 1), PtzPosition>    OwPtzPosition;
-
-    // 设备状态实时回传
+    // 通用健康状态推送 (心跳或故障时触发)
     typedef Packet<_APP_OW_ID_(DEVICE_UNKNOWN, 1), DeviceStatus> OwDeviceStatus;
+
+    // 云台位置实时回传 (FF 09 指令触发后的持续推送)
+    typedef Packet<_APP_OW_ID_(DEVICE_PTZ, 1), PtzPosition> OwPtzPosition;
+
+    // 强声播放结束/切换通知
+    typedef Packet<_APP_OW_ID_(DEVICE_SOUND, 1), SoundPlayStatusData> OwSoundPlayStatus;
+
+    // 强光实时参数反馈 (RGB_V3 状态回传)
+    typedef Packet<_APP_OW_ID_(DEVICE_LIGHT, 1), LightRTParam>   OwLightStatus;
 
 }
 ECCS_END

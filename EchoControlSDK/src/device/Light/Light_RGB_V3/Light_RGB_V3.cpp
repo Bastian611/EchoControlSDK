@@ -119,7 +119,8 @@ void Light_RGB_V3::ParseFeedback(const u8* d) {
 
     // 推送状态包（可选）
     rpc::DeviceStatus ds;
-    ds.deviceID = m_deviceID.Value();
+    ds.deviceType = m_deviceID.GetDeviceType();
+    ds.deviceIndex = m_deviceID.GetIndex();
     ds.state = (u8)GetState();
     ds.temperature = m_devTemp.load();
     auto pkt = std::make_shared<rpc::OwDeviceStatus>(ds);

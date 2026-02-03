@@ -54,7 +54,7 @@ enum ECCS_DevType {
 // 回调事件类型
 // -----------------------------------------------------------
 enum ECCS_EventType {
-    ECCS_EVT_UNKNOWN = 0,
+    ECCS_EVT_GENERAL = 0,
     ECCS_EVT_STATUS_CHANGE = 1, // 状态变更 (Payload: DeviceStatus结构体)
     ECCS_EVT_PTZ_ANGLE = 2, // 云台角度 (Payload: PtzPosition结构体)
     ECCS_EVT_SOUND_FINISH = 3  // 播放结束 (无 Payload)

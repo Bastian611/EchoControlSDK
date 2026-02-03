@@ -153,7 +153,7 @@ extern "C" {
 
     ECCS_API ECCS_Error ECCS_Light_SetLevel(ECCS_HANDLE hDev, int level)
     {
-        return PostPkt<rpc::RqLightLevel>(hDev, did::DEVICE_LIGHT, (u8)level);
+        return PostPkt<rpc::RqLightWorkMode>(hDev, did::DEVICE_LIGHT, (u8)level);
     }
 
     ECCS_API ECCS_Error ECCS_Light_SetStrobe(ECCS_HANDLE hDev, int isOpen)
@@ -183,10 +183,10 @@ extern "C" {
     // --- Sound ---
     ECCS_API ECCS_Error ECCS_Sound_Play(ECCS_HANDLE hDev, const char* filename, int loop) 
     {
-        rpc::SoundPlayCtrl data;
+        rpc::SoundPlayFile data;
         strncpy(data.filename, filename, sizeof(data.filename) - 1);
         data.loop = (u8)loop;
-        return PostPkt<rpc::RqSoundPlay>(hDev, did::DEVICE_SOUND, data);
+        return PostPkt<rpc::RqSoundPlayFile>(hDev, did::DEVICE_SOUND, data);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_Stop(ECCS_HANDLE hDev) 
@@ -207,7 +207,7 @@ extern "C" {
 
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen) 
     {
-        return PostPkt<rpc::RqSoundMic>(hDev, did::DEVICE_SOUND, (bool)(isOpen != 0));
+        return PostPkt<rpc::RqSoundMicSwitch>(hDev, did::DEVICE_SOUND, (bool)(isOpen != 0));
     }
 
     ECCS_API ECCS_Error ECCS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len) {

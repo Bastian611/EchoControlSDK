@@ -47,9 +47,9 @@ EchoControlHandler::EchoControlHandler() {
         });
 
     // 亮度
-    Register<rpc::RqLightLevel>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+    Register<rpc::RqLightWorkMode>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ILight_Device, light);
-        CAST_PKT(rpc::RqLightLevel, req);
+        CAST_PKT(rpc::RqLightWorkMode, req);
         light->SetBrightness(req->data); // u8
         });
 
@@ -123,7 +123,7 @@ EchoControlHandler::EchoControlHandler() {
     // =======================================================
 
     // 播放文件
-    Register<rpc::RqSoundPlay>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+    Register<rpc::RqSoundPlayFile>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
         CAST_PKT(rpc::RqSoundPlayIndex, req);
         sound->PlayIndex(req->data.index, req->data.loop > 0);
@@ -136,9 +136,9 @@ EchoControlHandler::EchoControlHandler() {
         });
 
     // 喊话
-    Register<rpc::RqSoundMic>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+    Register<rpc::RqSoundMicSwitch>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
-        CAST_PKT(rpc::RqSoundMic, req);
+        CAST_PKT(rpc::RqSoundMicSwitch, req);
         sound->PushAudio(req->data); // bool
         });
 

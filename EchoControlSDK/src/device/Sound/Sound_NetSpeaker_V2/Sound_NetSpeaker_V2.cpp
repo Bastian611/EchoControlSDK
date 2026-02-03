@@ -497,7 +497,8 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
             // 触发用户回调
             rpc::DeviceStatus ds;
             ds.state = GetState();
-            ds.deviceID = m_deviceID.Value();
+            ds.deviceType = m_deviceID.GetDeviceType();
+            ds.deviceIndex = m_deviceID.GetIndex();
             auto pkt = std::make_shared<rpc::OwDeviceStatus>(ds);
             if (m_statusCb) m_statusCb(pkt);
         }

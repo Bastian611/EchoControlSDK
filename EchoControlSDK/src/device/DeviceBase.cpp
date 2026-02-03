@@ -119,8 +119,8 @@ void DeviceBase::SetState(DevState newState, int errCode)
             DevStateToStr(newState));
 
         // 发送一次“状态未变，但有错误”的通知
-        status.deviceID = m_deviceID.Value();
-        status.slotID = (u8)m_slotID;
+        status.deviceType = m_deviceID.GetDeviceType();
+        status.deviceIndex = m_deviceID.GetIndex();
         status.state = (u8)newState; // enum -> u8
         status.errorCode = (u32)errCode;
         status.temperature = 0.0f; // 可扩展：从属性获取

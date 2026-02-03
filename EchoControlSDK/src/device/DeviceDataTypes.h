@@ -35,20 +35,6 @@ struct SoundFileInfo
     u32 duration;   // 秒
 };
 
-// 自定义Json解析器
-struct JsonData
-{
-    std::map<std::string, std::string> jsonKV;
-};
-
-// 自定义Json值
-struct JsonValue
-{
-    str strVal;
-    std::vector<JsonValue> arrayVal;
-    bool isArray{ false };
-};
-
 // 音频发送参数控制
 struct AudioSpec {
     size_t chunkSize; // 每一包发送的大小
