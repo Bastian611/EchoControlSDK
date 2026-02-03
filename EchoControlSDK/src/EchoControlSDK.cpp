@@ -202,10 +202,7 @@ extern "C" {
 
     ECCS_API ECCS_Error ECCS_Sound_TTS(ECCS_HANDLE hDev, const char* text) 
     {
-        rpc::SoundTTSCtrl data;
-        strncpy(data.text, text, sizeof(data.text) - 1);
-        data.text[sizeof(data.text) - 1] = '\0'; // 确保字符串以 null 结尾
-        return PostPkt<rpc::RqSoundTTS>(hDev, did::DEVICE_SOUND, data);
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen) 

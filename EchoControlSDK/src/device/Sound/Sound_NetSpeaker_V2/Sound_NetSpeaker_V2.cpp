@@ -611,6 +611,8 @@ void Sound_NetSpeaker_V2::AudioTxLoop()
         size_t available = m_audioTxBuf->Available();
         size_t triggerSize = m_currentSpec.chunkSize;
 
+        AudioSpec spec = GetCurrentSpec(); // 安全获取快照
+
         if (available >= triggerSize)
         {
             int len = m_audioTxBuf->Read(buf, triggerSize);
@@ -696,6 +698,7 @@ bool Sound_NetSpeaker_V2::SyncConfigToDevice()
 
 void Sound_NetSpeaker_V2::UpdateAudioSpec(SoundStatus mode)
 {
+    std::lock_guard<std::mutex> lock(m_specMutex); // 加锁更新
     if (mode == SoundStatus::MicBroadcast) {
         m_txTargetPort = 8999;     // 协议：PCM 喊话走 8999
         m_currentSpec = { 640, 5 }; // PCM 16k 建议帧大小
@@ -704,6 +707,12 @@ void Sound_NetSpeaker_V2::UpdateAudioSpec(SoundStatus mode)
         m_txTargetPort = 9888;      // 协议：MP3 流播放走 9888
         m_currentSpec = { 1024, 2 }; // MP3 44.1k 数据块可以稍大
     }
+}
+
+AudioSpec Sound_NetSpeaker_V2::GetCurrentSpec() const 
+{
+    std::lock_guard<std::mutex> lock(m_specMutex);
+    return m_currentSpec;
 }
 
 ECCS_END

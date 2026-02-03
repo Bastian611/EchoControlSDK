@@ -43,7 +43,7 @@ EchoControlHandler::EchoControlHandler() {
     Register<rpc::RqLightSwitch>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ILight_Device, light);
         CAST_PKT(rpc::RqLightSwitch, req);
-        light->SetSwitch(req->data); // bool
+        light->SetLightSwitch(req->data); // bool
         });
 
     // 亮度
@@ -58,6 +58,20 @@ EchoControlHandler::EchoControlHandler() {
         CAST_DEV(ILight_Device, light);
         CAST_PKT(rpc::RqLightStrobe, req);
         light->SetStrobe(req->data); // bool
+        });
+
+    // Light 工作模式 (RGB_V3)
+    Register<rpc::RqLightWorkMode>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ILight_Device, light);
+        CAST_PKT(rpc::RqLightWorkMode, req);
+        light->SetWorkMode((RGB_V3_LightMode)req->data.mode);
+        });
+
+    // Light 调焦 (RGB_V3)
+    Register<rpc::RqLightFocus>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ILight_Device, light);
+        CAST_PKT(rpc::RqLightFocus, req);
+        light->SetFocus((RGB_V3_FocusType)req->data.type, req->data.value);
         });
 
     // =======================================================
@@ -84,6 +98,26 @@ EchoControlHandler::EchoControlHandler() {
         ptz->PtzPreset(req->data.action, req->data.index);
         });
 
+    // 绝对定位
+    Register<rpc::RqPtzAbsolutePos>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(IPTZ_Device, ptz);
+        CAST_PKT(rpc::RqPtzAbsolutePos, req);
+        ptz->PtzSetAbsolutePos(req->data.pan, req->data.tilt);
+        });
+
+    // 线扫范围
+    Register<rpc::RqPtzScanRange>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(IPTZ_Device, ptz);
+        CAST_PKT(rpc::RqPtzScanRange, req);
+        ptz->PtzSetScanRange(req->data.startAngle, req->data.endAngle);
+        });
+
+    // 开关线扫
+    Register<rpc::RqPtzStartScan>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(IPTZ_Device, ptz);
+        ptz->PtzStartScan();
+        });
+
     // =======================================================
     // 强声设备 (Sound)
     // =======================================================
@@ -91,8 +125,8 @@ EchoControlHandler::EchoControlHandler() {
     // 播放文件
     Register<rpc::RqSoundPlay>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
-        CAST_PKT(rpc::RqSoundPlay, req);
-        sound->PlayFile(req->data.filename, req->data.loop > 0);
+        CAST_PKT(rpc::RqSoundPlayIndex, req);
+        sound->PlayIndex(req->data.index, req->data.loop > 0);
         });
 
     // 停止
@@ -101,18 +135,11 @@ EchoControlHandler::EchoControlHandler() {
         sound->StopPlay();
         });
 
-    // TTS
-    Register<rpc::RqSoundTTS>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
-        CAST_DEV(ISound_Device, sound);
-        CAST_PKT(rpc::RqSoundTTS, req);
-        sound->TTSPlay(req->data.text);
-        });
-
     // 喊话
     Register<rpc::RqSoundMic>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
         CAST_PKT(rpc::RqSoundMic, req);
-        sound->SetMic(req->data); // bool
+        sound->PushAudio(req->data); // bool
         });
 
     // 设置音量
@@ -123,7 +150,7 @@ EchoControlHandler::EchoControlHandler() {
     });
 
     // =======================================================
-    // 4. 超声设备 (Ultrasonic)
+    // 超声设备 (Ultrasonic)
     // =======================================================
 
     // 开关控制

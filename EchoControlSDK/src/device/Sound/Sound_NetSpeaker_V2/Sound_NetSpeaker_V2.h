@@ -132,7 +132,9 @@ private:
     // 动态端口相关
     std::atomic<int> m_txTargetPort{ 8999 }; // 目标设备端口：PCM=8999, MP3=9888
     std::atomic<int> m_rxLocalPort{ 11200 }; // 本地绑定端口：用于接收设备发回的音频
-    std::atomic<AudioSpec> m_currentSpec;
+    AudioSpec m_currentSpec;
+    mutable std::mutex m_specMutex;
+    AudioSpec GetCurrentSpec() const;
 
     // =================================================
     // 心跳

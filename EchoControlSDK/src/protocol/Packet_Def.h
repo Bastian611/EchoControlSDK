@@ -63,7 +63,7 @@ namespace rpc {
         u8 volume; 
     };        // “Ù¡ø
 
-    struct SoundPlayIndexCtrl {
+    struct SoundPlayIndex {
         int index;
         u8 loop;
     };
@@ -154,8 +154,8 @@ namespace rpc {
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 4), bool>      RqSoundMic;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 4), Result>    RpSoundMic;
 
-    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 5), SoundPlayIndexCtrl> RqSoundPlayIndex;
-    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 5), Result>             RpSoundPlayIndex;
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 5), SoundPlayIndex> RqSoundPlayIndex;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 5), Result>         RpSoundPlayIndex;
 
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 6), int>                RqSoundOneKey;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 6), Result>             RpSoundOneKey;
