@@ -42,14 +42,14 @@ struct AudioSpec {
 };
 
 // RGB V3工作模式
-enum RGB_V3_LightMode : u8 {
+enum class RGB_V3_LightMode : u8 {
     Off = 1,        // 不出光
     Blingding = 2,  // 炫目模式
     Lighting = 3    // 照明模式
 };
 
 // 调焦参数
-enum RGB_V3_FocusType : u8 {
+enum class RGB_V3_FocusType : u8 {
     Distance = 1,
     Angle = 2,
     StepAdd = 3,

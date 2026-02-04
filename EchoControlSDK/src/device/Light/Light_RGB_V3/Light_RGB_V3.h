@@ -27,6 +27,7 @@ public:
     virtual ECCS_Error SetLightLevel(u8 power) override;
     virtual ECCS_Error SetFlashFreq(u8 hz) override;
     virtual ECCS_Error SetFocus(RGB_V3_FocusType type, u16 value) override;
+    virtual ECCS_Error SetStrobe(bool isOpen) override;
 
 protected:
     virtual int ReadRaw(u8* buf, u32 maxLen) override;

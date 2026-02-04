@@ -47,12 +47,12 @@ ECCS_Error Light_Green_Small::SetLightSwitch(bool isOpen)
     return SendFixedPacket(isOpen ? 0x21 : 0x22); // 21:开, 22:关
 }
 
-ECCS_Error Light_Green_Small::SetFlashFreq(u8 hz) 
+ECCS_Error Light_Green_Small::SetStrobe(bool isOpen)
 {
     if (!m_bIsLighting) {
         return ECCS_ERR_DEV_LIGHT_CLOSE;
     }
-    return SendFixedPacket(hz > 0 ? 0x25 : 0x26); // 25:开频闪, 26:关频闪
+    return SendFixedPacket(isOpen ? 0x25 : 0x26); // 25:开频闪, 26:关频闪
 }
 
 ECCS_Error Light_Green_Small::SendFixedPacket(u8 cmd) 

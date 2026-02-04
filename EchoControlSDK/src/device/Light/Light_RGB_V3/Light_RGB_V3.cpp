@@ -57,6 +57,11 @@ ECCS_Error Light_RGB_V3::SetFlashFreq(u8 hz) {
     return SendCommand();
 }
 
+ECCS_Error Light_RGB_V3::SetStrobe(bool isOpen)
+{
+    return SetFlashFreq(isOpen ? 10 : 0);
+}
+
 ECCS_Error Light_RGB_V3::SetFocus(RGB_V3_FocusType type, u16 value) {
     m_curFocusType = type;
     m_curFocusValue = value;

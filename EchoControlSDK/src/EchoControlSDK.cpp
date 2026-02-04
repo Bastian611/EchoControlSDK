@@ -5,6 +5,8 @@
 #include "config/ConfigManager.h"
 #include "device/DeviceBase.h"
 #include "device/Sound/ISound_Device.h" 
+#include "device/Light/ILight_Device.h"
+#include "device/PTZ/IPTZ_Device.h"
 #include "protocol/Packet_Def.h"
 #include <string.h>
 
@@ -21,6 +23,12 @@ USING_ECCS
 static const char* DEFAULT_RULE_PATH = "./config/global.cfg";
 static const char* DEFAULT_DEV_PATH  = "./config/device.cfg";
 
+// 字符串安全拷贝
+#define SAFE_STRCPY(dst, src) \
+    do { \
+        strncpy(dst, src, sizeof(dst) - 1); \
+        (dst)[sizeof(dst) - 1] = '\0'; \
+    } while(0)
 
 // 安全转换句柄
 static ConfigManager* SafeCast(ECCS_HANDLE hDev) {
@@ -61,8 +69,9 @@ ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val)
 {
     CHECK_INIT_AND_GET_MGR();
     ConfigManager* mgr = SafeCast(hDev);
-    DeviceBase* dev = InternalFindDevice(mgr, type);
+    if (!mgr) return ECCS_ERR_INVALID_PARAM;
 
+    DeviceBase* dev = mgr->GetBestDevice(type);
     if (!dev) return ECCS_ERR_DEV_NOT_FOUND; // 找不到对应的硬件模块
     
     auto pkt = std::make_shared<TPacket>(val);
@@ -119,30 +128,23 @@ extern "C" {
                 auto p = std::dynamic_pointer_cast<rpc::OwPtzPosition>(pkt);
                 if (p) cb(hDev, ECCS_EVT_PTZ_ANGLE, &p->data, sizeof(p->data), userCtx);
             }
-            else if (id == rpc::OwSoundPlayEnd::_FACTORY_ID_) {
+            else if (id == rpc::OwSoundPlayStatus::_FACTORY_ID_) {
+                auto p = std::dynamic_pointer_cast<rpc::OwSoundPlayStatus>(pkt);
+                // 仅当播放完成时通知应用层
+                if (p && p->data.playState == SoundPlayState::Finished)
                 cb(hDev, ECCS_EVT_SOUND_FINISH, nullptr, 0, userCtx);
             }
         };
 
-        // 假设 ConfigManager 已经有了 SetGlobalCallback 遍历设置给所有设备
-        //mgr->SetGlobalCallback(internalCb);
-
-        // 临时实现：手动遍历设置
-        int count = mgr->GetDeviceCount();
-        for (int i = 0; i < count; ++i) {
-            DeviceBase* dev = mgr->GetDeviceByIndex(i);
-            if (dev) dev->SetStatusCallback(internalCb);
-        }
-
+        mgr->SetGlobalCallback(internalCb);
         return ECCS_SUCCESS;
     }
 
-    ECCS_API bool ECCS_IsSystemOnline(ECCS_HANDLE hDev) {
+    ECCS_API bool ECCS_IsOnline(ECCS_HANDLE hDev) {
         ConfigManager* mgr = SafeCast(hDev);
         if (!mgr) return false;
-        // 简单策略：所有设备都在线才算系统在线，或者只要有一个在线
-        // 这里示例：检查是否所有 Critical 设备在线
-        return true;
+        // 作为中控代理，如果没有任何一个核心设备在线，则返回 false
+        return GET_MGR()->GetDeviceCount() > 0;
     }
 
     // --- Light ---
@@ -151,14 +153,27 @@ extern "C" {
         return PostPkt<rpc::RqLightSwitch>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0));
     }
 
+    ECCS_API ECCS_Error ECCS_Light_SetMode(ECCS_HANDLE hDev, int mode) {
+        return PostPkt<rpc::RqLightWorkMode>(hDev, did::DEVICE_LIGHT, (u8)mode);
+    }
+
     ECCS_API ECCS_Error ECCS_Light_SetLevel(ECCS_HANDLE hDev, int level)
     {
-        return PostPkt<rpc::RqLightWorkMode>(hDev, did::DEVICE_LIGHT, (u8)level);
+        return PostPkt<rpc::RqSetLightLevel>(hDev, did::DEVICE_LIGHT, (u8)level);
+    }
+
+    ECCS_API ECCS_Error ECCS_Light_SetFocus(ECCS_HANDLE hDev, int type, int value) {
+        rpc::LightFocus data = { (u8)type, (u16)value };
+        return PostPkt<rpc::RqLightFocus>(hDev, did::DEVICE_LIGHT, data);
     }
 
     ECCS_API ECCS_Error ECCS_Light_SetStrobe(ECCS_HANDLE hDev, int isOpen)
     {
         return PostPkt<rpc::RqLightStrobe>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0));
+    }
+
+    ECCS_API ECCS_Error ECCS_Light_QueryStatus(ECCS_HANDLE hDev) {
+        return PostPkt<rpc::RqQueryLightStatus>(hDev, did::DEVICE_LIGHT, rpc::NoneData());
     }
 
     // --- PTZ ---
@@ -168,25 +183,33 @@ extern "C" {
         return PostPkt<rpc::RqPtzMove>(hDev, did::DEVICE_PTZ, data);
     }
 
-    ECCS_API ECCS_Error ECCS_PTZ_Zoom(ECCS_HANDLE hDev, int isZoomIn)
-    {
-        // 暂不支持或需要扩展协议
-        return ECCS_ERR_NOT_SUPPORTED;
+    ECCS_API ECCS_Error ECCS_PTZ_SetAbsolutePos(ECCS_HANDLE hDev, float pan, float tilt) {
+        rpc::PtzPosition data = { pan, tilt, 0 };
+        return PostPkt<rpc::RqPtzAbsolutePos>(hDev, did::DEVICE_PTZ, data);
     }
 
-    ECCS_API ECCS_Error ECCS_PTZ_Preset(ECCS_HANDLE hDev, int action, int index)
-    {
-        rpc::PtzPreset data = { (u8)action, (u8)index };
-        return PostPkt<rpc::RqPtzPreset>(hDev, did::DEVICE_PTZ, data);
+    ECCS_API ECCS_Error ECCS_PTZ_SetScanRange(ECCS_HANDLE hDev, float start, float end) {
+        rpc::PtzScanRange data = { start, end };
+        return PostPkt<rpc::RqSetPtzScanRange>(hDev, did::DEVICE_PTZ, data);
+    }
+
+    ECCS_API ECCS_Error ECCS_PTZ_StartScan(ECCS_HANDLE hDev) {
+        return PostPkt<rpc::RqPtzStartScan>(hDev, did::DEVICE_PTZ, rpc::NoneData());
+    }
+
+    ECCS_API ECCS_Error ECCS_PTZ_StopScan(ECCS_HANDLE hDev) {
+        return PostPkt<rpc::RqPtzStopScan>(hDev, did::DEVICE_PTZ, rpc::NoneData());
+    }
+
+    ECCS_API ECCS_Error ECCS_PTZ_Reset(ECCS_HANDLE hDev) {
+        return PostPkt<rpc::RqPtzReset>(hDev, did::DEVICE_PTZ, rpc::NoneData());
     }
 
     // --- Sound ---
-    ECCS_API ECCS_Error ECCS_Sound_Play(ECCS_HANDLE hDev, const char* filename, int loop) 
+    ECCS_API ECCS_Error ECCS_Sound_Play(ECCS_HANDLE hDev, int index, int loop) 
     {
-        rpc::SoundPlayFile data;
-        strncpy(data.filename, filename, sizeof(data.filename) - 1);
-        data.loop = (u8)loop;
-        return PostPkt<rpc::RqSoundPlayFile>(hDev, did::DEVICE_SOUND, data);
+        rpc::SoundPlayIndex data = { index, (u8)loop };
+        return PostPkt<rpc::RqSoundPlayIndex>(hDev, did::DEVICE_SOUND, data);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_Stop(ECCS_HANDLE hDev) 
@@ -194,15 +217,30 @@ extern "C" {
         return PostPkt<rpc::RqSoundStop>(hDev, did::DEVICE_SOUND, rpc::NoneData());
     }
 
-    ECCS_API ECCS_Error ECCS_Sound_SetVolume(ECCS_HANDLE hDev, int volume) 
-    {
-        rpc::SoundVolCtrl data = { (u8)volume };
-        return PostPkt<rpc::RqSetSoundVolume>(hDev, did::DEVICE_SOUND, data);
+    ECCS_API ECCS_Error ECCS_Sound_Next(ECCS_HANDLE hDev) {
+        return PostPkt<rpc::RqSoundNext>(hDev, did::DEVICE_SOUND, rpc::NoneData());
     }
 
-    ECCS_API ECCS_Error ECCS_Sound_TTS(ECCS_HANDLE hDev, const char* text) 
+    ECCS_API ECCS_Error ECCS_Sound_Prev(ECCS_HANDLE hDev) {
+        return PostPkt<rpc::RqSoundPrev>(hDev, did::DEVICE_SOUND, rpc::NoneData());
+    }
+
+    ECCS_API ECCS_Error ECCS_Sound_OneKeyPlay(ECCS_HANDLE hDev, int index) {
+        return PostPkt<rpc::RqSoundOneKey>(hDev, did::DEVICE_SOUND, index);
+    }
+
+    ECCS_API ECCS_Error ECCS_Sound_SetCapVolume(ECCS_HANDLE hDev, int volume) 
     {
-        return ECCS_ERR_NOT_SUPPORTED;
+        return PostPkt<rpc::RqSetSoundCapVolume>(hDev, did::DEVICE_SOUND, (u8)volume);
+    }
+
+    ECCS_API ECCS_Error ECCS_Sound_SetPlayVolume(ECCS_HANDLE hDev, int volume)
+    {
+        return PostPkt<rpc::RqSetSoundPlayVolume>(hDev, did::DEVICE_SOUND, (u8)volume);
+    }
+
+    ECCS_API ECCS_Error ECCS_Sound_QueryAudioList(ECCS_HANDLE hDev) {
+        return PostPkt<rpc::RqQueryAudioList>(hDev, did::DEVICE_SOUND, rpc::NoneData());
     }
 
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen) 
@@ -211,14 +249,12 @@ extern "C" {
     }
 
     ECCS_API ECCS_Error ECCS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len) {
-        ConfigManager* mgr = SafeCast(hDev);
-        DeviceBase* dev = InternalFindDevice(mgr, did::DEVICE_SOUND);
-
+        CHECK_INIT_AND_GET_MGR();
+        // 实时音频流由于高频，绕过 RPC 队列直接推送到驱动 Buffer
+        DeviceBase* dev = mgr->GetBestDevice(did::DEVICE_SOUND);
         auto soundDev = dynamic_cast<ISound_Device*>(dev);
-        if (soundDev) {
-            soundDev->PushAudio((const u8*)data, (u32)len);
-            return ECCS_SUCCESS;
-        }
+        if (soundDev) 
+            return soundDev->PushAudio((const u8*)data, (u32)len);
         return ECCS_ERR_DEV_NOT_FOUND;
     }
 

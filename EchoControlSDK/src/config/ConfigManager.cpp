@@ -60,7 +60,7 @@ int ConfigManager::ParseSlotID(const str& sectionName)
     return std::atoi(numStr.c_str());
 }
 
-void ConfigManager::LoadSystem(const str& rulePath, const str& paramPath)
+ECCS_Error ConfigManager::LoadSystem(const str& rulePath, const str& paramPath)
 {
     SMART_LOCK(m_devMutex);// 加锁保护加载过程
 

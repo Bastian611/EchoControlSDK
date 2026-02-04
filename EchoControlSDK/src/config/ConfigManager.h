@@ -3,6 +3,8 @@
 #include "../utils/singleton.hpp"
 #include "../utils/configparser.h"
 #include "../protocol/RpcPacket.h"
+#include "../include/EchoControlCode.h"
+#include "../device/DeviceID.h"
 #include <map>
 #include <vector>
 
@@ -30,7 +32,7 @@ public:
     ~ConfigManager();
 
     // 核心入口：加载规则(.sys) 和 参数(.dev)，创建设备
-    void LoadSystem(const str& rulePath, const str& paramPath);
+    ECCS_Error LoadSystem(const str& rulePath, const str& paramPath);
 
     // 获取运行时设备指针
     DeviceBase* GetDevice(int slotID);
@@ -50,6 +52,8 @@ public:
     void SetGlobalCallback(std::function<void(std::shared_ptr<rpc::RpcPacket>)> cb);
 
     DeviceBase* GetBestDevice(did::DeviceType type);
+
+    bool IsInitialized() const { return m_initialized.load(); }
 
 private:
     int ParseSlotID(const str& sectionName);

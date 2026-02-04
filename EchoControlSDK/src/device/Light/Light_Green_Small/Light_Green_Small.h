@@ -21,7 +21,7 @@ public:
 
     // --- ILight_Device 接口实现 ---
     virtual ECCS_Error SetLightSwitch(bool isOpen) override;
-    virtual ECCS_Error SetFlashFreq(u8 hz) override;     // hz > 0 为开启，0 为关闭
+    virtual ECCS_Error SetStrobe(bool isOpen) override;     // hz > 0 为开启，0 为关闭
 
 protected:
     virtual int ReadRaw(u8* buf, u32 maxLen) override;
