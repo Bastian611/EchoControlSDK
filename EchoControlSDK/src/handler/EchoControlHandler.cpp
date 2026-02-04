@@ -43,28 +43,21 @@ EchoControlHandler::EchoControlHandler() {
     Register<rpc::RqLightSwitch>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ILight_Device, light);
         CAST_PKT(rpc::RqLightSwitch, req);
-        light->SetLightSwitch(req->data); // bool
+        light->SetLightSwitch(req->data); 
         });
 
     // 亮度
     Register<rpc::RqLightWorkMode>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ILight_Device, light);
         CAST_PKT(rpc::RqLightWorkMode, req);
-        light->SetBrightness(req->data); // u8
+        light->SetWorkMode((RGB_V3_LightMode)req->data); 
         });
 
     // 频闪
     Register<rpc::RqLightStrobe>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ILight_Device, light);
         CAST_PKT(rpc::RqLightStrobe, req);
-        light->SetStrobe(req->data); // bool
-        });
-
-    // Light 工作模式 (RGB_V3)
-    Register<rpc::RqLightWorkMode>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
-        CAST_DEV(ILight_Device, light);
-        CAST_PKT(rpc::RqLightWorkMode, req);
-        light->SetWorkMode((RGB_V3_LightMode)req->data.mode);
+        light->SetStrobe(req->data); 
         });
 
     // Light 调焦 (RGB_V3)
@@ -81,7 +74,7 @@ EchoControlHandler::EchoControlHandler() {
     // 移动 (上/下/左/右)
     Register<rpc::RqPtzMove>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(IPTZ_Device, ptz);
-        CAST_PKT(rpc::RqPtzMove, req); // 注意: 你的 PacketDef 中 PtzMotion 结构体
+        CAST_PKT(rpc::RqPtzMove, req); 
         ptz->PtzMove(req->data.action, req->data.speed);
         });
 
@@ -98,6 +91,12 @@ EchoControlHandler::EchoControlHandler() {
         ptz->PtzPreset(req->data.action, req->data.index);
         });
 
+    // 归零
+    Register<rpc::RqPtzReset>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(IPTZ_Device, ptz);
+        ptz->PtzReset();
+        });
+
     // 绝对定位
     Register<rpc::RqPtzAbsolutePos>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(IPTZ_Device, ptz);
@@ -105,17 +104,16 @@ EchoControlHandler::EchoControlHandler() {
         ptz->PtzSetAbsolutePos(req->data.pan, req->data.tilt);
         });
 
-    // 线扫范围
-    Register<rpc::RqPtzScanRange>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
-        CAST_DEV(IPTZ_Device, ptz);
-        CAST_PKT(rpc::RqPtzScanRange, req);
-        ptz->PtzSetScanRange(req->data.startAngle, req->data.endAngle);
-        });
-
-    // 开关线扫
+    // 开启线扫
     Register<rpc::RqPtzStartScan>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(IPTZ_Device, ptz);
         ptz->PtzStartScan();
+        });
+
+    // 停止线扫
+    Register<rpc::RqPtzStopScan>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(IPTZ_Device, ptz);
+        ptz->PtzStopScan();
         });
 
     // =======================================================
@@ -125,8 +123,15 @@ EchoControlHandler::EchoControlHandler() {
     // 播放文件
     Register<rpc::RqSoundPlayFile>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
+        CAST_PKT(rpc::RqSoundPlayFile, req);
+        LOG_WARNING("Sound PlayFile: %s (Not fully implemented in driver)", req->data.filename);
+        });
+
+    // 按索引播放
+    Register<rpc::RqSoundPlayIndex>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ISound_Device, sound);
         CAST_PKT(rpc::RqSoundPlayIndex, req);
-        sound->PlayIndex(req->data.index, req->data.loop > 0);
+        sound->PlayIndex(req->data.index, req->data.loop != 0);
         });
 
     // 停止
@@ -135,19 +140,29 @@ EchoControlHandler::EchoControlHandler() {
         sound->StopPlay();
         });
 
-    // 喊话
+    Register<rpc::RqSoundPrev>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ISound_Device, sound);
+        sound->Prev();
+        });
+
+    Register<rpc::RqSoundNext>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ISound_Device, sound);
+        sound->Next();
+        });
+
+    // 开启喊话模式
     Register<rpc::RqSoundMicSwitch>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
         CAST_PKT(rpc::RqSoundMicSwitch, req);
-        sound->PushAudio(req->data); // bool
+        sound->MicSwitch(req->data); 
         });
 
-    // 设置音量
-    Register<rpc::RqSetSoundVolume>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+    Register<rpc::RqSoundRTAudio>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
-        CAST_PKT(rpc::RqSetSoundVolume, req);
-        sound->SetVolume(req->data.volume);
-    });
+        CAST_PKT(rpc::RqSoundRTAudio, req);
+        sound->PushAudio(req->data.data, req->data.len);
+        });
+
 
     // =======================================================
     // 超声设备 (Ultrasonic)
@@ -162,6 +177,55 @@ EchoControlHandler::EchoControlHandler() {
         // req->data.isOpen: 0, 1
         ultrasonic->SetSwitch(req->data.channel, (req->data.isOpen != 0));
     });
+
+    // =======================================================
+    // [CATEGORY] QUERY - 状态查询 
+    // =======================================================
+
+    Register<rpc::RqQueryPtzPos>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(IPTZ_Device, ptz);
+        ptz->PtzQueryPosition();
+        });
+
+    Register<rpc::RqQueryAudioList>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ISound_Device, sound);
+        std::vector<SoundFileInfo> dummy;
+        sound->GetAudioList(dummy);
+        });
+
+    // =======================================================
+    // [CATEGORY] SETTING - 参数配置
+    // =======================================================
+
+    Register<rpc::RqSetLightLevel>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ILight_Device, light);
+        CAST_PKT(rpc::RqSetLightLevel, req);
+        light->SetLightLevel(req->data);
+        });
+
+    Register<rpc::RqSetLightFlashFreq>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ILight_Device, light);
+        CAST_PKT(rpc::RqSetLightFlashFreq, req);
+        light->SetFlashFreq(req->data);
+        });
+
+    Register<rpc::RqSetPtzScanRange>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(IPTZ_Device, ptz);
+        CAST_PKT(rpc::RqSetPtzScanRange, req);
+        ptz->PtzSetScanRange(req->data.start, req->data.end);
+        });
+
+    Register<rpc::RqSetSoundPlayVolume>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ISound_Device, sound);
+        CAST_PKT(rpc::RqSetSoundPlayVolume, req);
+        sound->SetPlayVolume(req->data);
+        });
+
+    Register<rpc::RqSetSoundCapVolume>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ISound_Device, sound);
+        CAST_PKT(rpc::RqSetSoundCapVolume, req);
+        sound->SetCaptureVolume(req->data);
+        });
 }
 
 // -----------------------------------------------------------

@@ -44,6 +44,8 @@ public:
     virtual ECCS_Error Next() override;
     virtual ECCS_Error Prev() override;
 
+    virtual ECCS_Error MicSwitch(bool isOpen) override;
+
     // --- Ò»¼üÇýÉ¢ ---
     virtual ECCS_Error OneKeyPlay(int index) override;
 

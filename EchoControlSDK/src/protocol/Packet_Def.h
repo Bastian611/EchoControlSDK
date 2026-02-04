@@ -71,6 +71,11 @@ namespace rpc {
         } files[200]; 
     };
 
+    struct SoundAudioBuffer {
+        const u8* data;
+        u32 len;
+    };
+
     // 强声播放进度/状态
     struct SoundPlayStatusData {
         int currentIndex;   // 当前播放的索引
@@ -163,6 +168,9 @@ namespace rpc {
     // 喊话
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 7), bool>      RqSoundMicSwitch;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 7), Result>    RpSoundMicSwitch;
+
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 8), SoundAudioBuffer>  RqSoundRTAudio;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 8), Result>            RpSoundRTAudio;
 
     // --- PTZ Control ---
     // 移动

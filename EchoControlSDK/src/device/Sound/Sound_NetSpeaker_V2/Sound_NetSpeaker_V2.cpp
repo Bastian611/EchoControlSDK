@@ -135,6 +135,24 @@ ECCS_Error Sound_NetSpeaker_V2::Prev()
     return ECCS_SUCCESS;
 }
 
+ECCS_Error Sound_NetSpeaker_V2::MicSwitch(bool isOpen)
+{
+    if (!SetSoundMode(SoundStatus::MicBroadcast))
+        return ECCS_ERR_DEV_BUSY;
+
+    char param[64];
+    if (isOpen) {
+        snprintf(param, sizeof(param), "\"model\":\"mic_broadcast\"");
+    }
+    else {
+        snprintf(param, sizeof(param), "\"model\":\"idle\"");
+    }
+    SendJsonCmd(BuildJson("model_change", param));
+
+    SetState(STATE_WORKING);
+    return ECCS_SUCCESS;
+}
+
 // ---------- 一键驱散 ----------
 
 ECCS_Error Sound_NetSpeaker_V2::OneKeyPlay(int index)
@@ -614,14 +632,14 @@ void Sound_NetSpeaker_V2::AudioTxLoop()
 
         AudioSpec spec = GetCurrentSpec(); // 安全获取快照
 
-        if (available >= triggerSize)
+        if (available >= spec.chunkSize)
         {
             int len = m_audioTxBuf->Read(buf, triggerSize);
             if (len > 0) {
                 udp.write(buf, len);
                 // 网线直连下，仅做极微小休眠防止 CPU 100%
                 // 具体的发送节奏由应用层往 RingBuffer 写的速度决定
-                msleep(m_currentSpec.intervalMs);
+                msleep(spec.intervalMs);
             }
         }
         else {
