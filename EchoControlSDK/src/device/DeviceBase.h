@@ -80,6 +80,9 @@ public:
     using StatusCallback = std::function<void(std::shared_ptr<rpc::RpcPacket>)>;
     void SetStatusCallback(StatusCallback cb);
 
+    // 获取当前回调，用于同步请求时的备份
+    StatusCallback GetStatusCallback() const { return m_statusCb; }
+
 protected:
     // ------------------------------------------------
     // 供子类使用的 API (Protected)
