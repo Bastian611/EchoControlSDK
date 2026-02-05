@@ -11,9 +11,9 @@ Ultrasonic_TAS_IO_428R2::~Ultrasonic_TAS_IO_428R2() {
     if (m_socket) m_socket->close();
 }
 
-bool Ultrasonic_TAS_IO_428R2::Init(int slotID, const std::map<str, str>& config) {
+ECCS_Error Ultrasonic_TAS_IO_428R2::Init(int slotID, const std::map<str, str>& config) {
     // 1. 基类初始化
-    if (!DeviceBase::Init(slotID, config)) return false;
+    if (!DeviceBase::Init(slotID, config)) return ECCS_ERR_NOT_INIT;
 
     // 2. 获取配置
     m_ip = GetPropValue<str>("IP");
@@ -22,7 +22,7 @@ bool Ultrasonic_TAS_IO_428R2::Init(int slotID, const std::map<str, str>& config)
     // 默认端口 10123 (参考你的旧代码)
     if (m_port == 0) m_port = 10123;
 
-    return true;
+    return ECCS_SUCCESS;
 }
 
 void Ultrasonic_TAS_IO_428R2::SetSwitch(u8 channel, bool isOpen) {

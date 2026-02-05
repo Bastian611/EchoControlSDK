@@ -61,7 +61,7 @@ ECCS_Error DeviceBase::Start() {
 
 ECCS_Error DeviceBase::Stop() {
     if (m_state != TS_RUNNING && m_thread == nullptr) 
-        return;
+        return ECCS_ERR_DEV_BUSY;
 
     m_shuttingDown = true;
 
@@ -69,6 +69,7 @@ ECCS_Error DeviceBase::Stop() {
     Thread::join();
     SetState(STATE_OFFLINE);
     LOG_INFO("[Slot %d] Device Thread Stopped.", m_slotID);
+    return ECCS_SUCCESS;
 }
 
 // --- 控制入口 ---
@@ -138,8 +139,8 @@ void DeviceBase::SetState(DevState newState, int errCode)
     m_devState = newState;
     OnStateEnter(m_devState);
 
-    status.deviceID = m_deviceID.Value();
-    status.slotID = (u8)m_slotID;
+    status.deviceType = m_deviceID.GetDeviceType();
+    status.deviceIndex = m_deviceID.GetIndex();
     status.state = (u8)newState; // enum -> u8
     status.errorCode = (u32)errCode;
     status.temperature = 0.0f; // 可扩展：从属性获取

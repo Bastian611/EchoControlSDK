@@ -70,8 +70,7 @@ template <typename TRqPacket, typename TRpPacket, typename TVal, typename TResul
 ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val, TResult* outData)
 {
     CHECK_INIT_AND_GET_MGR();
-    ConfigManager* mgr = SafeCast(hDev);
-    if (!mgr) 
+    if (hDev == ECCS_INVALID_HANDLE) 
         return ECCS_ERR_INVALID_PARAM;
 
     DeviceBase* dev = mgr->GetBestDevice(type);
@@ -110,15 +109,12 @@ ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val, TRes
     if (syncSem.wait_for(ECCS_C11 chrono::milliseconds(500))) {
         if (outData)
             *outData = result;
-        // 恢复全局状态监听 (重要：防止干扰后续流程)
-        // mgr->SetGlobalCallback(...) 会在外部重新设置回来的
-        return ret.load();
     }
 
     // 还原回调
     dev->SetStatusCallback(oldCb);
 
-    return ret;
+    return ret.load();
 }
 
 // --- 接口实现 ---
@@ -186,7 +182,8 @@ extern "C" {
     ECCS_API bool ECCS_IsOnline(ECCS_HANDLE hDev) 
     {
         ConfigManager* mgr = SafeCast(hDev);
-        if (!mgr) return false;
+        if (!mgr) 
+            return false;
         // 作为中控代理，如果没有任何一个核心设备在线，则返回 false
         return GET_MGR()->GetDeviceCount() > 0;
     }
@@ -324,10 +321,12 @@ extern "C" {
         return PostPkt<rpc::RqQueryPlayVolume, rpc::RpQueryPlayVolume>(hDev, did::DEVICE_SOUND, rpc::NoneData(), volume);
     }
 
-    ECCS_API ECCS_Error ECCS_Sound_QueryAudioList(ECCS_HANDLE hDev) 
+    ECCS_API ECCS_Error ECCS_Sound_QueryAudioList(ECCS_HANDLE hDev, ECCS_SoundAudioList* list)
     {
-        rpc::Result result;
-        return PostPkt<rpc::RqQueryAudioList, rpc::RpQueryAudioList>(hDev, did::DEVICE_SOUND, rpc::NoneData(), &result);
+        if (!list) 
+            return ECCS_ERR_INVALID_PARAM;
+        return PostPkt<rpc::RqQueryAudioList, rpc::RpQueryAudioList>
+            (hDev, did::DEVICE_SOUND, rpc::NoneData(), (rpc::SoundAudioList*)list);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen) 
@@ -350,6 +349,10 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Sound_UploadFile(ECCS_HANDLE hDev, const char* localPath) 
     {
         CHECK_INIT_AND_GET_MGR();
+        // 检查本地路径是否有效
+        if (!isFileExisted(localPath)) 
+            return ECCS_ERR_INVALID_PARAM;
+
         DeviceBase* dev = mgr->GetBestDevice(did::DEVICE_SOUND);
         auto soundDev = dynamic_cast<ISound_Device*>(dev);
         if (!soundDev)

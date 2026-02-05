@@ -19,7 +19,7 @@ public:
     virtual ~Ultrasonic_TAS_IO_428R2();
 
     // 覆盖初始化
-    virtual bool Init(int slotID, const std::map<str, str>& config) override;
+    virtual ECCS_Error Init(int slotID, const std::map<str, str>& config) override;
 
 protected:
     // --- 实现 IUltrasonic_Device 接口 ---

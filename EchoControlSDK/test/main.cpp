@@ -143,26 +143,10 @@ int main() {
                 int act, spd; ss >> act >> spd;
                 ECCS_PTZ_Move(g_hSystem, act, spd);
             }
-            else if (subCmd == "preset") {
-                int act, idx; ss >> act >> idx;
-                ECCS_PTZ_Preset(g_hSystem, act, idx);
-            }
         }
         else if (cmd == "sound") {
             std::string subCmd; ss >> subCmd;
-            if (subCmd == "play") {
-                std::string file; ss >> file;
-                ECCS_Sound_Play(g_hSystem, file.c_str(), 0);
-            }
-            else if (subCmd == "stop") ECCS_Sound_Stop(g_hSystem);
-            else if (subCmd == "vol") {
-                int vol; ss >> vol;
-                ECCS_Sound_SetVolume(g_hSystem, vol);
-            }
-            else if (subCmd == "tts") {
-                std::string text; std::getline(ss, text);
-                ECCS_Sound_TTS(g_hSystem, text.c_str());
-            }
+            if (subCmd == "stop") ECCS_Sound_Stop(g_hSystem);
             else if (subCmd == "mic") {
                 int on; ss >> on;
                 ECCS_Sound_SetMic(g_hSystem, on);

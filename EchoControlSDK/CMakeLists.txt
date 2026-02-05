@@ -8,8 +8,6 @@ if (WIN32)
     set(ECCS_PLATFORM windows)
 elseif (UNIX)
     set(ECCS_PLATFORM linux)
-else()
-    set(ECCS_PLATFORM unknown)
 endif()
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -23,6 +21,41 @@ set(ECCS_OUTPUT_ROOT ${CMAKE_SOURCE_DIR}/out/${ECCS_PLATFORM}/${ECCS_ARCH})
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ==============================================================================
+# 第三方库配置 (华视芯 HSX SDK)
+# ==============================================================================
+set(HSX_ROOT_DIR ${CMAKE_SOURCE_DIR}/3rd/hsx_vision)
+
+if (WIN32)
+    # --- Windows 配置 ---
+    set(HSX_INCLUDE_DIR ${HSX_ROOT_DIR}/win/include)
+    set(HSX_LIB_DIR     ${HSX_ROOT_DIR}/win/lib)
+    set(HSX_BIN_DIR     ${HSX_ROOT_DIR}/win/bin)
+
+    # 指定需要链接的 .lib 文件 (导入库)
+    set(HSX_LIBS 
+        ${HSX_LIB_DIR}/AjNetSdkDll.lib
+        ${HSX_LIB_DIR}/AjPlayer.lib
+        ${HSX_LIB_DIR}/AjRtspClientLib.lib
+        ${HSX_LIB_DIR}/RemoteConfig.lib
+    )
+    add_definitions(-DPLATFORM_WIN32)
+
+elseif (UNIX)
+    # --- Linux 配置 ---
+    set(HSX_INCLUDE_DIR ${HSX_ROOT_DIR}/linux/include)
+    set(HSX_LIB_DIR     ${HSX_ROOT_DIR}/linux/lib/x86_64)
+
+    # 链接静态库 (.a) 以实现单文件输出
+    # 注意：静态库链接顺序通常很重要，底层库放在后面
+    set(HSX_LIBS 
+        ${HSX_LIB_DIR}/libNetSDK.a
+        ${HSX_LIB_DIR}/libixml.a
+        ${HSX_LIB_DIR}/libtinyxml.a
+    )
+    add_definitions(-DPLATFORM_LINUX)
+endif()
 
 # ==============================================================================
 # SDK 库构建 (DLL & Static Lib)
@@ -41,7 +74,11 @@ set_target_properties(EchoControlSDK PROPERTIES
 )
 # 定义导出宏
 target_compile_definitions(EchoControlSDK PRIVATE ECHOCONTROLSDK_EXPORTS)
-target_include_directories(EchoControlSDK PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(EchoControlSDK 
+                            PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include 
+                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+                            PRIVATE ${HSX_INCLUDE_DIR}
+                            )
 
 # --- 动态库 (DLL) ---
 add_library(EchoControlSDK_shared SHARED ${ECHO_SDK_SOURCES} ${ECHO_SDK_HEADERS})
@@ -49,18 +86,40 @@ add_library(EchoControlSDK_shared SHARED ${ECHO_SDK_SOURCES} ${ECHO_SDK_HEADERS}
 set_target_properties(EchoControlSDK_shared PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${ECCS_OUTPUT_ROOT}/bin"   # DLL 输出到 bin
     ARCHIVE_OUTPUT_DIRECTORY "${ECCS_OUTPUT_ROOT}/lib"   # Import Lib 输出到 lib
+    LIBRARY_OUTPUT_DIRECTORY "${ECCS_OUTPUT_ROOT}/bin"   # SO 输出到 bin
     OUTPUT_NAME "EchoControlSDK"
 )
 target_compile_definitions(EchoControlSDK_shared PRIVATE ECHOCONTROLSDK_EXPORTS)
-target_include_directories(EchoControlSDK_shared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(EchoControlSDK_shared 
+                            PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include 
+                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+                            PRIVATE ${HSX_INCLUDE_DIR}
+                            )
 
 # --- 系统库链接 ---
 if (WIN32)
-    target_link_libraries(EchoControlSDK ws2_32)
-    target_link_libraries(EchoControlSDK_shared ws2_32)
+    target_link_libraries(EchoControlSDK PRIVATE ${HSX_LIBS} ws2_32)
+    target_link_libraries(EchoControlSDK_shared PRIVATE ${HSX_LIBS} ws2_32)
 elseif (UNIX)
-    target_link_libraries(EchoControlSDK pthread)
-    target_link_libraries(EchoControlSDK_shared pthread)
+    target_link_libraries(EchoControlSDK PRIVATE ${HSX_LIBS} pthread d1)
+    target_link_libraries(EchoControlSDK_shared PRIVATE ${HSX_LIBS} pthread d1)
+endif()
+
+# ==============================================================================
+# Windows 特有逻辑：自动拷贝厂商 DLL 到 SDK 输出目录
+# ==============================================================================
+if (WIN32)
+    # 收集 3rd/hsx_vision/win/bin 下的所有 dll
+    file(GLOB HSX_DLL_FILES "${HSX_BIN_DIR}/*.dll")
+    
+    foreach(DLL_PATH ${HSX_DLL_FILES})
+        add_custom_command(TARGET EchoControlSDK_shared POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${DLL_PATH}
+            $<TARGET_FILE_DIR:EchoControlSDK_shared>
+            COMMENT "Copying HSX runtime DLL: ${DLL_PATH}"
+        )
+    endforeach()
 endif()
 
 # ==============================================================================
@@ -80,7 +139,7 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tool/ConfigTool.cpp")
 endif()
 
 # ==============================================================================
-# 4. 测试程序: EchoControlTest
+# 测试程序: EchoControlTest
 # ==============================================================================
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp")
     add_executable(EchoControlTest test/main.cpp)

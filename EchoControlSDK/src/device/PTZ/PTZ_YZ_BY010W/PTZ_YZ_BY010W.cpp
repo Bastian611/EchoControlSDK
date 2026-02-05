@@ -77,6 +77,11 @@ ECCS_Error PTZ_YZ_BY010W::PtzStop()
     return err;
 }
 
+ECCS_Error PTZ_YZ_BY010W::PtzPreset(u8 action, u8 index)
+{
+    return ECCS_ERR_NOT_SUPPORTED;
+}
+
 ECCS_Error PTZ_YZ_BY010W::PtzReset() 
 {
     
@@ -88,6 +93,11 @@ ECCS_Error PTZ_YZ_BY010W::PtzQueryPosition()
     // 主动查询水平和垂直
     SendPelcoD(0x00, 0x51, 0x00, 0x00);
     return SendPelcoD(0x00, 0x53, 0x00, 0x00);
+}
+
+ECCS_Error PTZ_YZ_BY010W::PtzZoom(bool isZoomIn)
+{
+    return ECCS_ERR_NOT_SUPPORTED;
 }
 
 ECCS_Error PTZ_YZ_BY010W::PtzSetAbsolutePos(float pan, float tilt) 

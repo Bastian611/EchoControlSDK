@@ -22,6 +22,61 @@ extern "C" {
 #endif
 
     // =======================================================
+    // 公共 C 结构体定义
+    // =======================================================
+
+#pragma pack(push, 1)
+
+    /** 
+     * @brief 强光状态信息 
+     * @param isOpen，开关状态
+     * @param brightness，亮度
+     * @param strobeFreq，频闪频率
+     * @param tempture，温度
+     * @note 当前版本未启用
+     */
+    typedef struct {
+        unsigned char isOpen;
+        unsigned char brightness;
+        unsigned char strobeFreq;
+        float temperature;
+    } ECCS_LightStatus;
+
+    /** 
+     * @brief 云台位置信息
+     * @param pan，水平角度信息
+     * @param tilt，垂直角度信息
+     * @param zoom，变倍（预留）
+     */
+    typedef struct {
+        float pan;
+        float tilt;
+        float zoom;
+    } ECCS_PtzPosition;
+
+    /** 
+     * @brief 音频文件简要信息
+     * @param index，文件索引号
+     * @param name，文件名称
+     */
+    typedef struct {
+        int index;
+        char name[64];
+    } ECCS_AudioFileInfo;
+
+    /** 
+     * @brief 音频文件列表 
+     * @param count，音频文件数量
+     * @param files，音频文件简要信息，目前最大支持200个音频文件
+     */
+    typedef struct {
+        unsigned short count;
+        ECCS_AudioFileInfo files[200];
+    } ECCS_SoundAudioList;
+
+#pragma pack(pop)
+
+    // =======================================================
     // 基础类型与回调定义
     // =======================================================
 
@@ -44,6 +99,8 @@ extern "C" {
     /**
      * @brief 全双工音频流回调
      * @param data 原始 PCM 数据流 (16kHz PCM)
+     * @param len  数据长度
+     * @param userCtx 用户注册时传入的上下文指针
      */
     typedef void (*ECCSAudioRxCallback)(ECCS_HANDLE hDev, const unsigned char* data, int len, void* userCtx);
 
@@ -79,7 +136,10 @@ extern "C" {
      */
     ECCS_API ECCS_Error ECCS_RegisterCallback(ECCS_HANDLE hDev, ECCS_CallbackFunc cb, void* userCtx);
     
-    // 检查设备是否在线
+    /** 
+     * @brief 检查设备是否在线
+     * @note 
+     */
     ECCS_API bool ECCS_IsOnline(ECCS_HANDLE hDev);
 
     /** 
@@ -132,14 +192,14 @@ extern "C" {
     /** 
      * @brief 相对移动控制 
      * @param action，移动: 1=Up, 2=Down, 3=Left, 4=Right, 5=Stop
-     *        speed， 速度: 0-64
+     * @param speed， 速度: 0-64
      */
     ECCS_API ECCS_Error ECCS_PTZ_Move(ECCS_HANDLE hDev, int action, int speed);
 
     /** 
      * @brief 设置水平线扫角度范围 
      * @param start，线扫起始角度: 0°-359.99°
-     *        end，  线扫终止角度: 0°-359.99°
+     * @param end，  线扫终止角度: 0°-359.99°
      */
     ECCS_API ECCS_Error ECCS_PTZ_SetScanRange(ECCS_HANDLE hDev, float start, float end);
 
@@ -165,7 +225,7 @@ extern "C" {
     /** 
      * @brief 按索引播放音频文件
      * @param index，音频文件索引号
-     *        loop， 是否循环播放（1=循环，0=不循环）
+     * @param loop， 是否循环播放（1=循环，0=不循环）
      */
     ECCS_API ECCS_Error ECCS_Sound_Play(ECCS_HANDLE hDev, int index, int loop);
 
@@ -186,6 +246,7 @@ extern "C" {
 
     /** 
      * @brief 触发一键驱散音频 
+     * @param index，指定索引号的音频，可为0
      */
     ECCS_API ECCS_Error ECCS_Sound_OneKeyPlay(ECCS_HANDLE hDev, int index);
 
@@ -210,22 +271,32 @@ extern "C" {
     /** 
      * @brief 同步获取设备内的音频列表 
      */
-    ECCS_API ECCS_Error ECCS_Sound_QueryAudioList(ECCS_HANDLE hDev);
+    ECCS_API ECCS_Error ECCS_Sound_QueryAudioList(ECCS_HANDLE hDev, ECCS_SoundAudioList* ist);
 
-    /** @brief 喊话模式开关 */
+    /** 
+     * @brief 喊话模式开关 
+     * @param isOpen，开关：1=Open, 0=Close
+     */
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen);
 
-    /** @brief 推送原始音频数据流 (全双工上行) */
+    /** 
+     * @brief 推送原始音频数据流 (全双工上行) 
+     * @param data，上行音频流数据，目前只支持pcm格式16kHz采样
+     * @param len， 上行音频流数据长度
+     * @note 执行此方法之前需要先调用 ECCS_Sound_SetMic 方法开启喊话通道
+     */
     ECCS_API ECCS_Error ECCS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len);
 
-    /** @brief 上传本地音频文件到设备存储 */
+    /** 
+     * @brief 上传本地音频文件到设备存储 
+     * @param localPath，本地音频文件名称，目前只支持mp3/pcm格式文件
+     */
     ECCS_API ECCS_Error ECCS_Sound_UploadFile(ECCS_HANDLE hDev, const char* localPath);
 
-    /** @brief 注册全双工音频流回传回调 */
+    /** 
+     * @brief 注册全双工音频流回传回调
+     */
     ECCS_API ECCS_Error ECCS_Sound_RegisterAudioCallback(ECCS_HANDLE hDev, ECCSAudioRxCallback cb, void* userCtx);
-
-    // 喊话模式: 1=开启, 0=关闭
-    ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen);
 
     /**
      * @brief 推送音频流数据 (直接写入内部缓冲区)
@@ -245,6 +316,7 @@ extern "C" {
      * @param hSystem 系统句柄
      * @param channel 通道号 (1=通道1, 2=通道2..., 0=所有)
      * @param isOpen  1=开启, 0=关闭
+     * @note 当前版本未启用
      */
     ECCS_API ECCS_Error ECCS_Ultrasonic_SetSwitch(ECCS_HANDLE hSystem, int channel, int isOpen);
 

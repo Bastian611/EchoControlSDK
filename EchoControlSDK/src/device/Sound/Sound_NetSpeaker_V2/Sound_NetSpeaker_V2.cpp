@@ -143,9 +143,11 @@ ECCS_Error Sound_NetSpeaker_V2::MicSwitch(bool isOpen)
     char param[64];
     if (isOpen) {
         snprintf(param, sizeof(param), "\"model\":\"mic_broadcast\"");
+        m_keepAudioTx = true;
     }
     else {
         snprintf(param, sizeof(param), "\"model\":\"idle\"");
+        m_keepAudioTx = false;
     }
     SendJsonCmd(BuildJson("model_change", param));
 

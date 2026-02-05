@@ -36,7 +36,7 @@ public:
     virtual ECCS_Error PtzZoom(bool isZoomIn) override;
 
     // --- 线扫角度设置
-    virtual ECCS_Error PtzSetScanRange(float startAngle, float endAngle) = 0;
+    virtual ECCS_Error PtzSetScanRange(float startAngle, float endAngle) override;
     // --- 启动线扫 ---
     ECCS_Error PTZ_YZ_BY010W::PtzStartScan() override;
     // --- 停止线扫 ---

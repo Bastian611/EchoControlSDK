@@ -33,6 +33,9 @@ void InitModelMapping() {
 
     // Sound
     g_ModelToIDMap["NETSPEAKER-V2"] = Sound_NetSpeaker_V2::ID;
+
+    // Camera
+    //g_ModelToIDMap["HSX-Camera"] = Camera_HSX_VISION::ID;
 }
 
 // 实现 DeviceFactory.h 中声明的查找函数
