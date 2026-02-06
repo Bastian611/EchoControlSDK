@@ -280,14 +280,6 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen);
 
     /** 
-     * @brief 推送原始音频数据流 (全双工上行) 
-     * @param data，上行音频流数据，目前只支持pcm格式16kHz采样
-     * @param len， 上行音频流数据长度
-     * @note 执行此方法之前需要先调用 ECCS_Sound_SetMic 方法开启喊话通道
-     */
-    ECCS_API ECCS_Error ECCS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len);
-
-    /** 
      * @brief 上传本地音频文件到设备存储 
      * @param localPath，本地音频文件名称，目前只支持mp3/pcm格式文件
      */
@@ -299,7 +291,7 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Sound_RegisterAudioCallback(ECCS_HANDLE hDev, ECCSAudioRxCallback cb, void* userCtx);
 
     /**
-     * @brief 推送音频流数据 (直接写入内部缓冲区)
+     * @brief 推送音频流数据(全双工上行)
      * @param hDev 设备句柄
      * @param data 音频数据指针 (PCM/MP3)
      * @param len  数据长度

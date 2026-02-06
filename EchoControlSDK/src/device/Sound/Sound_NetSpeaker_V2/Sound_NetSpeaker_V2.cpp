@@ -515,7 +515,7 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
             }
 
             // 触发用户回调
-            rpc::DeviceStatus ds;
+            DeviceStatus ds;
             ds.state = GetState();
             ds.deviceType = m_deviceID.GetDeviceType();
             ds.deviceIndex = m_deviceID.GetIndex();

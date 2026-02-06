@@ -202,122 +202,122 @@ extern "C" {
     // --- Light ---
     ECCS_API ECCS_Error ECCS_Light_SetSwitch(ECCS_HANDLE hDev, int isOpen)
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqLightSwitch, rpc::RpLightSwitch>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0), &result);
     }
 
     ECCS_API ECCS_Error ECCS_Light_SetMode(ECCS_HANDLE hDev, int mode) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqLightWorkMode, rpc::RpLightWorkMode>(hDev, did::DEVICE_LIGHT, (u8)mode, &result);
     }
 
     ECCS_API ECCS_Error ECCS_Light_SetLevel(ECCS_HANDLE hDev, int level)
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqSetLightLevel, rpc::RpSetLightLevel>(hDev, did::DEVICE_LIGHT, (u8)level, &result);
     }
 
     ECCS_API ECCS_Error ECCS_Light_SetFocus(ECCS_HANDLE hDev, int type, int value) 
     {
-        rpc::Result result;
-        rpc::LightFocus data = { (u8)type, (u16)value };
+        Result result;
+        LightFocus data = { (u8)type, (u16)value };
         return PostPkt<rpc::RqLightFocus, rpc::RpLightFocus>(hDev, did::DEVICE_LIGHT, data, &result);
     }
 
     ECCS_API ECCS_Error ECCS_Light_SetStrobe(ECCS_HANDLE hDev, int isOpen)
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqLightStrobe, rpc::RpLightStrobe>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0), &result);
     }
 
     // --- PTZ ---
     ECCS_API ECCS_Error ECCS_PTZ_Move(ECCS_HANDLE hDev, int action, int speed) 
     {
-        rpc::Result result;
-        rpc::PtzMotion data = { (u8)action, (u8)speed };
+        Result result;
+        PtzMotion data = { (u8)action, (u8)speed };
         return PostPkt<rpc::RqPtzMove, rpc::RpPtzMove>(hDev, did::DEVICE_PTZ, data, &result);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_SetAbsolutePos(ECCS_HANDLE hDev, float pan, float tilt) 
     {
-        rpc::Result result;
-        rpc::PtzPosition data = { pan, tilt, 0 };
+        Result result;
+        PtzPosition data = { pan, tilt, 0 };
         return PostPkt<rpc::RqPtzAbsolutePos, rpc::RpPtzAbsolutePos>(hDev, did::DEVICE_PTZ, data, &result);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_SetScanRange(ECCS_HANDLE hDev, float start, float end) 
     {
-        rpc::Result result;
-        rpc::PtzScanRange data = { start, end };
+        Result result;
+        PtzScanRange data = { start, end };
         return PostPkt<rpc::RqSetPtzScanRange, rpc::RpSetPtzScanRange>(hDev, did::DEVICE_PTZ, data, &result);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_StartScan(ECCS_HANDLE hDev) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqPtzStartScan, rpc::RpPtzStartScan>(hDev, did::DEVICE_PTZ, rpc::NoneData(), &result);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_StopScan(ECCS_HANDLE hDev) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqPtzStopScan, rpc::RpPtzStopScan>(hDev, did::DEVICE_PTZ, rpc::NoneData(), &result);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_Reset(ECCS_HANDLE hDev) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqPtzReset, rpc::RpPtzReset>(hDev, did::DEVICE_PTZ, rpc::NoneData(), &result);
     }
 
     // --- Sound ---
     ECCS_API ECCS_Error ECCS_Sound_Play(ECCS_HANDLE hDev, int index, int loop) 
     {
-        rpc::Result result;
-        rpc::SoundPlayIndex data = { index, (u8)loop };
+        Result result;
+        SoundPlayIndex data = { index, (u8)loop };
         return PostPkt<rpc::RqSoundPlayIndex, rpc::RpSoundPlayIndex>(hDev, did::DEVICE_SOUND, data, &result);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_Stop(ECCS_HANDLE hDev) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqSoundStop, rpc::RpSoundStop>(hDev, did::DEVICE_SOUND, rpc::NoneData(), &result);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_Next(ECCS_HANDLE hDev) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqSoundNext, rpc::RpSoundNext>(hDev, did::DEVICE_SOUND, rpc::NoneData(), &result);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_Prev(ECCS_HANDLE hDev) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqSoundPrev, rpc::RpSoundPrev>(hDev, did::DEVICE_SOUND, rpc::NoneData(), &result);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_OneKeyPlay(ECCS_HANDLE hDev, int index) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqSoundOneKey, rpc::RpSoundOneKey>(hDev, did::DEVICE_SOUND, index, &result);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_SetCapVolume(ECCS_HANDLE hDev, int volume) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqSetSoundCapVolume, rpc::RpSetSoundCapVolume>(hDev, did::DEVICE_SOUND, (u8)volume, &result);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_SetPlayVolume(ECCS_HANDLE hDev, int volume)
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqSetSoundPlayVolume, rpc::RpSetSoundPlayVolume>(hDev, did::DEVICE_SOUND, (u8)volume, &result);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_QueryPlayVolume(ECCS_HANDLE hDev, int* volume)
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqQueryPlayVolume, rpc::RpQueryPlayVolume>(hDev, did::DEVICE_SOUND, rpc::NoneData(), volume);
     }
 
@@ -326,12 +326,12 @@ extern "C" {
         if (!list) 
             return ECCS_ERR_INVALID_PARAM;
         return PostPkt<rpc::RqQueryAudioList, rpc::RpQueryAudioList>
-            (hDev, did::DEVICE_SOUND, rpc::NoneData(), (rpc::SoundAudioList*)list);
+            (hDev, did::DEVICE_SOUND, rpc::NoneData(), (SoundAudioList*)list);
     }
 
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen) 
     {
-        rpc::Result result;
+        Result result;
         return PostPkt<rpc::RqSoundMicSwitch, rpc::RpSoundMicSwitch>(hDev, did::DEVICE_SOUND, (bool)(isOpen != 0), &result);
     }
 
@@ -391,8 +391,8 @@ extern "C" {
 
     ECCS_API ECCS_Error ECCS_Ultrasonic_SetSwitch(ECCS_HANDLE hSystem, int channel, int isOpen)
     {
-        rpc::Result result;
-        rpc::UltrasonicSwitch data;
+        Result result;
+        UltrasonicSwitch data;
         data.channel = (u8)channel;
         data.isOpen = (u8)(isOpen != 0);
         return PostPkt<rpc::RqUltrasonicSwitch, rpc::RpUltrasonicSwitch>(hSystem, did::DEVICE_ULTRASONIC, data, &result);

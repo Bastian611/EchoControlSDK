@@ -123,7 +123,7 @@ void Light_RGB_V3::ParseFeedback(const u8* d) {
     if (err != 0) SetState(STATE_ERROR, err);
 
     // 推送状态包（可选）
-    rpc::DeviceStatus ds;
+    DeviceStatus ds;
     ds.deviceType = m_deviceID.GetDeviceType();
     ds.deviceIndex = m_deviceID.GetIndex();
     ds.state = (u8)GetState();

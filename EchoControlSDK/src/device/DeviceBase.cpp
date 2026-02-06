@@ -112,7 +112,7 @@ void DeviceBase::SetState(DevState newState, int errCode)
         return;
     }
     // ¹¹Ôì×´Ì¬°ü
-    rpc::DeviceStatus status;
+    DeviceStatus status;
     if (!IsValidStateTransition(m_devState, newState))
     {
         LOG_ERROR("Invalid state transition: {%s} -> {%s}",

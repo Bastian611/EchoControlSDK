@@ -240,7 +240,7 @@ void PTZ_YZ_BY010W::ParseResponse(const u8* data) {
         return;
     }
 
-    rpc::PtzPosition pos = { m_lastPan.load(), m_lastTilt.load(), 0 };
+    PtzPosition pos = { m_lastPan.load(), m_lastTilt.load(), 0 };
     auto pkt = std::make_shared<rpc::OwPtzPosition>(pos);
     if (m_statusCb) m_statusCb(pkt);
 }
