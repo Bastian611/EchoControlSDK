@@ -36,7 +36,7 @@ void InitModelMapping() {
     g_ModelToIDMap["NETSPEAKER-V2"] = Sound_NetSpeaker_V2::ID;
 
     // Camera
-    g_ModelToIDMap["HSX-Vision"] = Camera_HSXVision::ID;
+    //g_ModelToIDMap["HSX-Vision"] = Camera_HSXVision::ID;
 }
 
 // 实现 DeviceFactory.h 中声明的查找函数
@@ -69,7 +69,7 @@ FACTORY_APPEND(Sound_NetSpeaker_V2::ID,     Sound_NetSpeaker_V2,        DeviceBa
 
 FACTORY_APPEND(Ultrasonic_TAS_IO_428R2::ID, Ultrasonic_TAS_IO_428R2,    DeviceBase)
 
-FACTORY_APPEND(Camera_HSXVision::ID,        Camera_HSXVision,           DeviceBase)
+//FACTORY_APPEND(Camera_HSXVision::ID,        Camera_HSXVision,           DeviceBase)
 
 FACTORY_END(u32, DeviceBase)
 
