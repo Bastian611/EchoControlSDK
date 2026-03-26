@@ -23,16 +23,26 @@ void SystemCallback(ECCS_HANDLE hDev, ECCS_EventType type, const void* data, int
     case ECCS_EVT_STATUS_CHANGE:
         printf("\n[Callback] Device Status Changed!\n> ");
         break;
-    case ECCS_EVT_PTZ_ANGLE:
-        // data 是 PtzPosition 结构体
-        printf("\n[Callback] PTZ Angle Reported.\n> ");
+    case ECCS_EVT_PTZ_ANGLE: {
+        auto* pos = (ECCS_PtzPosition*)data;
+        // 使用 \r 实现原地刷新
+        printf("\r[PTZ实时角度] Pan: %.2f, Tilt: %.2f          ", pos->pan, pos->tilt);
+        fflush(stdout);
         break;
+    }
     case ECCS_EVT_SOUND_FINISH:
         printf("\n[Callback] Sound Playback Finished.\n> ");
         break;
     default:
         break;
     }
+}
+
+// ---------------------------------------------------------
+// 全双工音频流回传回调 (下行)
+// ---------------------------------------------------------
+void OnAudioRx(ECCS_HANDLE hDev, const unsigned char* data, int len, void* userCtx) {
+    // 实际业务中可将 data 写入 PCM 文件或进行语音播放
 }
 
 // ---------------------------------------------------------
@@ -57,26 +67,38 @@ void SimulateAudioStream() {
 }
 
 void PrintHelp() {
-    std::cout << "\n================ EchoControl System CLI ================\n";
-    std::cout << " Commands:\n";
-    std::cout << "  init              Initialize System\n";
-    std::cout << "  release           Release System\n";
-    std::cout << "\n  --- Light ---\n";
-    std::cout << "  light switch <0/1>   Turn Light Off/On\n";
-    std::cout << "  light level <0-100>  Set Brightness\n";
-    std::cout << "  light strobe <0/1>   Turn Strobe Off/On\n";
-    std::cout << "\n  --- PTZ ---\n";
-    std::cout << "  ptz move <act> <spd> Action: 1=Up,2=Down,3=Left,4=Right,5=Stop\n";
-    std::cout << "  ptz preset <1/2> <id> Action: 1=Set, 2=Goto\n";
-    std::cout << "\n  --- Sound ---\n";
-    std::cout << "  sound play <file>    Play audio file\n";
-    std::cout << "  sound stop           Stop playback\n";
-    std::cout << "  sound vol <0-100>    Set volume\n";
-    std::cout << "  sound tts <text>     Text to Speech\n";
-    std::cout << "  sound mic <0/1>      Enable/Disable Mic (Starts stream test)\n";
-    std::cout << "\n  help              Show this menu\n";
-    std::cout << "  quit              Exit\n";
-    std::cout << "========================================================\n";
+    std::cout << "\n==================== EchoControl SDK CLI (V1.0) ====================\n";
+    std::cout << " [System 管理]\n";
+    std::cout << "  init              : 初始化 SDK 并加载配置文件 (config/device.cfg)\n";
+    std::cout << "  release           : 释放资源并停止所有后台工作线程\n";
+    std::cout << "  disc              : 手动断开所有底层设备网络连接\n";
+    std::cout << "  version           : 获取当前 SDK 内部版本号\n";
+
+    std::cout << "\n [Light 强光控制]\n";
+    std::cout << "  l_sw <0/1>        : 强光总开关 (0: 关, 1: 开)\n";
+    std::cout << "  l_mode <1/2/3>    : 切换模式 (1: 不出光, 2: 炫目/绿光, 3: 照明/白光)\n";
+    std::cout << "  l_level <1-10>    : 设置功率等级 (1-10 档)\n";
+    std::cout << "  l_strobe <0/1>    : 频闪开关 (注: 必须在强光主开关开启时调用)\n";
+
+    std::cout << "\n [PTZ 云台控制]\n";
+    std::cout << "  p_move <1-5> <spd>: 方向控制 (1:上, 2:下, 3:左, 4:右, 5:停). 速度: 1-64\n";
+    std::cout << "  p_abs <pan> <tilt>: 精准定位 (Pan: 0-359.9°, Tilt: -90至+90°)\n";
+    std::cout << "  p_scan <s1> <s2>  : 设置水平线扫范围 (s1:起始, s2:终止)\n";
+    std::cout << "  p_reset           : 云台一键归零并执行硬件重启\n";
+
+    std::cout << "\n [Sound 强声控制]\n";
+    std::cout << "  play <idx> <0/1>  : 按索引播放音频. idx: 索引, 0/1: 是否循环\n";
+    std::cout << "  stop/next/prev    : 停止播放 / 下一曲 / 上一曲\n";
+    std::cout << "  vol <0-100>       : 设置播放器输出音量\n";
+    std::cout << "  list              : [同步查询] 获取设备内置音频文件列表 (Rp)\n";
+    std::cout << "  mic <0/1>         : 喊话模式开关. (1: 开启并触发测试流推送)\n";
+
+    std::cout << "\n [Ultrasonic 超声控制]\n";
+    std::cout << "  u_sw <ch> <0/1>   : 开关控制 (ch: 通道号, 0=所有, 1=通道1...)\n";
+
+    std::cout << "\n [通用]\n";
+    std::cout << "  help | quit       : 显示此菜单 | 退出程序\n";
+    std::cout << "====================================================================\n";
 }
 
 int main() {
@@ -94,22 +116,17 @@ int main() {
 
         if (cmd == "quit" || cmd == "exit") break;
         if (cmd == "help") { PrintHelp(); continue; }
+        if (cmd == "version") { std::cout << "SDK Version: " << ECCS_GetVersion() << std::endl; continue; }
 
         if (cmd == "init") {
-            ECCS_Error err = ECCS_Init();
-            if (err == ECCS_SUCCESS) {
-                // 获取唯一的系统句柄
+            if (ECCS_Init() == ECCS_SUCCESS) {
                 g_hSystem = ECCS_GetHandle();
-                if (g_hSystem) {
-                    ECCS_RegisterCallback(g_hSystem, SystemCallback, nullptr);
-                    std::cout << "Init Success. Version: " << ECCS_GetVersion() << std::endl;
-                }
-                else {
-                    std::cout << "Init Success but Handle is NULL!" << std::endl;
-                }
+                ECCS_RegisterCallback(g_hSystem, SystemCallback, nullptr);
+                ECCS_Sound_RegisterAudioCallback(g_hSystem, OnAudioRx, nullptr);
+                std::cout << "SDK Init Success." << std::endl;
             }
             else {
-                std::cout << "Init Failed! Error: " << err << std::endl;
+                std::cout << "SDK Init Failed!" << std::endl;
             }
             continue;
         }
@@ -119,51 +136,92 @@ int main() {
             if (g_streamThread && g_streamThread->joinable()) g_streamThread->join();
             ECCS_Release();
             g_hSystem = nullptr;
-            std::cout << "Released." << std::endl;
+            std::cout << "Resources Released." << std::endl;
             continue;
         }
 
-        // 下面的命令都需要句柄
-        if (!g_hSystem) {
-            std::cout << "Please 'init' first." << std::endl;
-            continue;
-        }
+        if (!g_hSystem) { std::cout << "Error: Please 'init' first." << std::endl; continue; }
 
-        // --- 业务指令 ---
-        if (cmd == "light") {
-            std::string subCmd; ss >> subCmd;
+        // --- 逻辑分发 (严格匹配 EchoControlSDK.cpp 定义) ---
+        if (cmd == "l_sw") {
             int val; ss >> val;
-            if (subCmd == "switch") ECCS_Light_SetSwitch(g_hSystem, val);
-            else if (subCmd == "level") ECCS_Light_SetLevel(g_hSystem, val);
-            else if (subCmd == "strobe") ECCS_Light_SetStrobe(g_hSystem, val);
+            ECCS_Light_SetSwitch(g_hSystem, val);
         }
-        else if (cmd == "ptz") {
-            std::string subCmd; ss >> subCmd;
-            if (subCmd == "move") {
-                int act, spd; ss >> act >> spd;
-                ECCS_PTZ_Move(g_hSystem, act, spd);
+        else if (cmd == "l_mode") {
+            int val; ss >> val;
+            ECCS_Light_SetMode(g_hSystem, val);
+        }
+        else if (cmd == "l_level") {
+            int val; ss >> val;
+            ECCS_Light_SetLevel(g_hSystem, val);
+        }
+        else if (cmd == "l_strobe") {
+            int val; ss >> val;
+            ECCS_Light_SetStrobe(g_hSystem, val);
+        }
+        else if (cmd == "p_move") {
+            int act, spd; ss >> act >> spd;
+            ECCS_PTZ_Move(g_hSystem, act, spd);
+        }
+        else if (cmd == "p_abs") {
+            float p, t; 
+            ss >> p >> t;
+            ECCS_PTZ_SetAbsolutePos(g_hSystem, p, t);
+        }
+        else if (cmd == "p_reset") {
+            ECCS_PTZ_Reset(g_hSystem);
+        }
+        else if (cmd == "play") {
+            int idx, loop; ss >> idx >> loop;
+            ECCS_Sound_Play(g_hSystem, idx, loop);
+        }
+        else if (cmd == "stop") {
+            ECCS_Sound_Stop(g_hSystem);
+        }
+        else if (cmd == "next") {
+            ECCS_Sound_Next(g_hSystem);
+        }
+        else if (cmd == "prev") {
+            ECCS_Sound_Prev(g_hSystem);
+        }
+        else if (cmd == "vol") {
+            int val; ss >> val;
+            ECCS_Sound_SetPlayVolume(g_hSystem, val);
+        }
+        else if (cmd == "list") {
+            ECCS_SoundAudioList audioList;
+            std::cout << "Waiting for Device Sync (500ms timeout)..." << std::endl;
+            ECCS_Error err = ECCS_Sound_QueryAudioList(g_hSystem, &audioList);
+            if (err == ECCS_SUCCESS) {
+                std::cout << "--- Audio List (" << audioList.count << " files) ---" << std::endl;
+                for (int i = 0; i < audioList.count; ++i)
+                    std::cout << " [" << audioList.files[i].index << "] " << audioList.files[i].name << std::endl;
+            }
+            else {
+                std::cout << "Query Failed: " << ECCS_GetErrorStr(err) << std::endl;
             }
         }
-        else if (cmd == "sound") {
-            std::string subCmd; ss >> subCmd;
-            if (subCmd == "stop") ECCS_Sound_Stop(g_hSystem);
-            else if (subCmd == "mic") {
-                int on; ss >> on;
-                ECCS_Sound_SetMic(g_hSystem, on);
-
-                if (on && !g_simulatingStream) {
-                    g_simulatingStream = true;
-                    g_streamThread = new std::thread(SimulateAudioStream);
-                }
-                else if (!on) {
-                    g_simulatingStream = false;
-                    if (g_streamThread && g_streamThread->joinable()) {
-                        g_streamThread->join();
-                        delete g_streamThread;
-                        g_streamThread = nullptr;
-                    }
+        else if (cmd == "mic") {
+            int on; ss >> on;
+            ECCS_Sound_SetMic(g_hSystem, on);
+            if (on && !g_simulatingStream) {
+                g_simulatingStream = true;
+                g_streamThread = new std::thread(SimulateAudioStream);
+            }
+            else if (!on) {
+                g_simulatingStream = false;
+                if (g_streamThread && g_streamThread->joinable()) {
+                    g_streamThread->join(); delete g_streamThread; g_streamThread = nullptr;
                 }
             }
+        }
+        else if (cmd == "u_sw") {
+            int ch, on; ss >> ch >> on;
+            ECCS_Ultrasonic_SetSwitch(g_hSystem, ch, on);
+        }
+        else if (cmd == "disc") {
+            ECCS_Device_Disconnect(g_hSystem);
+            std::cout << "Forced Network Disconnect." << std::endl;
         }
     }
 

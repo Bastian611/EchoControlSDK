@@ -38,9 +38,9 @@ public:
     // --- 线扫角度设置
     virtual ECCS_Error PtzSetScanRange(float startAngle, float endAngle) override;
     // --- 启动线扫 ---
-    ECCS_Error PTZ_YZ_BY010W::PtzStartScan() override;
+    virtual ECCS_Error PtzStartScan() override;
     // --- 停止线扫 ---
-    ECCS_Error PTZ_YZ_BY010W::PtzStopScan() override;
+    virtual ECCS_Error PtzStopScan() override;
 
 private:
     ECCS_Error SendPelcoD(u8 cmd1, u8 cmd2, u8 d1, u8 d2);

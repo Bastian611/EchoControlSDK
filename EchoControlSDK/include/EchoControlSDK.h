@@ -203,6 +203,8 @@ extern "C" {
      */
     ECCS_API ECCS_Error ECCS_PTZ_SetScanRange(ECCS_HANDLE hDev, float start, float end);
 
+    ECCS_API ECCS_Error ECCS_PTZ_SetAbsolutePos(ECCS_HANDLE hDev, float pan, float tilt);
+
     /** 
      * @brief 开启自动线扫 
      */
