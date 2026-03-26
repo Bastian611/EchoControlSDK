@@ -12,22 +12,27 @@ public:
     virtual ECCS_Error SetLightLevel(u8 power) {
         LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
             m_slotID, GetProperty("Model").c_str());
+        return ECCS_ERR_NOT_SUPPORTED;
     }
     virtual ECCS_Error SetFlashFreq(u8 hz) {
         LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
             m_slotID, GetProperty("Model").c_str());
+        return ECCS_ERR_NOT_SUPPORTED;
     }
     virtual ECCS_Error SetBrightness(u8 level) {
         LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
             m_slotID, GetProperty("Model").c_str());
+        return ECCS_ERR_NOT_SUPPORTED;
     }
     virtual ECCS_Error SetWorkMode(RGB_V3_LightMode mode) {
         LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
             m_slotID, GetProperty("Model").c_str());
+        return ECCS_ERR_NOT_SUPPORTED;
     }
     virtual ECCS_Error SetFocus(RGB_V3_FocusType type, u16 value) {
         LOG_WARNING("[Slot %d] Device (Model: %s) does not support.",
             m_slotID, GetProperty("Model").c_str());
+        return ECCS_ERR_NOT_SUPPORTED;
     }
     /**
      * @brief 设置频闪 (扩展功能)
@@ -36,6 +41,7 @@ public:
     virtual ECCS_Error SetStrobe(bool isOpen) {
         LOG_WARNING("[Slot %d] Device (Model: %s) does not support Strobe.",
             m_slotID, GetProperty("Model").c_str());
+        return ECCS_ERR_NOT_SUPPORTED;
     }
 };
 
