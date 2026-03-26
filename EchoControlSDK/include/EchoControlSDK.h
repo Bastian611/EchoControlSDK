@@ -196,14 +196,19 @@ extern "C" {
      */
     ECCS_API ECCS_Error ECCS_PTZ_Move(ECCS_HANDLE hDev, int action, int speed);
 
+    /**
+     * @brief 控制云台旋转到指定角度
+     * @param start，线扫起始角度: 0°-359.99°
+     * @param end，  线扫终止角度: 0°-359.99°
+     */
+    ECCS_API ECCS_Error ECCS_PTZ_SetAbsolutePos(ECCS_HANDLE hDev, float pan, float tilt);
+
     /** 
      * @brief 设置水平线扫角度范围 
      * @param start，线扫起始角度: 0°-359.99°
      * @param end，  线扫终止角度: 0°-359.99°
      */
     ECCS_API ECCS_Error ECCS_PTZ_SetScanRange(ECCS_HANDLE hDev, float start, float end);
-
-    ECCS_API ECCS_Error ECCS_PTZ_SetAbsolutePos(ECCS_HANDLE hDev, float pan, float tilt);
 
     /** 
      * @brief 开启自动线扫 
@@ -271,7 +276,7 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Sound_QueryPlayVolume(ECCS_HANDLE hDev, int* volume);
 
     /** 
-     * @brief 同步获取设备内的音频列表 
+     * @brief 获取设备内的音频列表 
      */
     ECCS_API ECCS_Error ECCS_Sound_QueryAudioList(ECCS_HANDLE hDev, ECCS_SoundAudioList* ist);
 

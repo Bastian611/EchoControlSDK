@@ -107,8 +107,10 @@ int main() {
     std::string line;
     while (true) {
         std::cout << "\n> ";
-        if (!std::getline(std::cin, line)) break;
-        if (line.empty()) continue;
+        if (!std::getline(std::cin, line))
+            break;
+        if (line.empty()) 
+            continue;
 
         std::stringstream ss(line);
         std::string cmd;
@@ -144,23 +146,28 @@ int main() {
 
         // --- 逻辑分发 (严格匹配 EchoControlSDK.cpp 定义) ---
         if (cmd == "l_sw") {
-            int val; ss >> val;
+            int val; 
+            ss >> val;
             ECCS_Light_SetSwitch(g_hSystem, val);
         }
         else if (cmd == "l_mode") {
-            int val; ss >> val;
+            int val; 
+            ss >> val;
             ECCS_Light_SetMode(g_hSystem, val);
         }
         else if (cmd == "l_level") {
-            int val; ss >> val;
+            int val; 
+            ss >> val;
             ECCS_Light_SetLevel(g_hSystem, val);
         }
         else if (cmd == "l_strobe") {
-            int val; ss >> val;
+            int val; 
+            ss >> val;
             ECCS_Light_SetStrobe(g_hSystem, val);
         }
         else if (cmd == "p_move") {
-            int act, spd; ss >> act >> spd;
+            int act, spd; 
+            ss >> act >> spd;
             ECCS_PTZ_Move(g_hSystem, act, spd);
         }
         else if (cmd == "p_abs") {
@@ -172,7 +179,8 @@ int main() {
             ECCS_PTZ_Reset(g_hSystem);
         }
         else if (cmd == "play") {
-            int idx, loop; ss >> idx >> loop;
+            int idx, loop; 
+            ss >> idx >> loop;
             ECCS_Sound_Play(g_hSystem, idx, loop);
         }
         else if (cmd == "stop") {
@@ -185,7 +193,8 @@ int main() {
             ECCS_Sound_Prev(g_hSystem);
         }
         else if (cmd == "vol") {
-            int val; ss >> val;
+            int val; 
+            ss >> val;
             ECCS_Sound_SetPlayVolume(g_hSystem, val);
         }
         else if (cmd == "list") {
@@ -202,7 +211,8 @@ int main() {
             }
         }
         else if (cmd == "mic") {
-            int on; ss >> on;
+            int on; 
+            ss >> on;
             ECCS_Sound_SetMic(g_hSystem, on);
             if (on && !g_simulatingStream) {
                 g_simulatingStream = true;
@@ -216,7 +226,8 @@ int main() {
             }
         }
         else if (cmd == "u_sw") {
-            int ch, on; ss >> ch >> on;
+            int ch, on; 
+            ss >> ch >> on;
             ECCS_Ultrasonic_SetSwitch(g_hSystem, ch, on);
         }
         else if (cmd == "disc") {
