@@ -204,7 +204,7 @@ ECCS_Error Sound_NetSpeaker_V2::SetCaptureVolume(u8 vol)
 {
     char param[32];
     snprintf(param, sizeof(param), "\"vol\":\"%d\"", vol);
-    SendJsonCmd("set_cap_vol", param);
+    SendJsonCmd("cap_vol", param);
     m_captureVolume = vol;
     return ECCS_SUCCESS;
 }
@@ -422,8 +422,9 @@ bool Sound_NetSpeaker_V2::SendJsonCmd(const char* cmd, const char* params, int t
         // 清空信号量之前的残留状态
         while (m_ackSem.try_wait());
         m_ctrlSocket->write((const u8*)json.c_str(), json.size());
-        LOG_DEBUG("[NetSpeaker] write: %s", json.c_str());
-        
+        if (json.length() > 4) {
+            LOG_DEBUG("[NetSpeaker] write: %s", json.substr(0, json.length() - 4).c_str());
+        }
         // 等待信号量，超时时间由参数决定
         if (m_ackSem.wait_for(ECCS_C11 chrono::milliseconds(timeout_ms))) {
             return m_lastAckResult; // 被 HandleJsonReply 唤醒，返回结果
