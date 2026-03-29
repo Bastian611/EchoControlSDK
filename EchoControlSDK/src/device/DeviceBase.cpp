@@ -149,7 +149,7 @@ void DeviceBase::SetState(DevState newState, int errCode)
     auto pkt = std::make_shared<rpc::OwDeviceStatus>(status);
     if (m_statusCb) m_statusCb(pkt);
 
-    // LOG_DEBUG("[Slot %d] State Changed: %s", m_slotID, DevStateToStr(newState));
+     LOG_DEBUG("[Slot %d] State Changed: %s", m_slotID, DevStateToStr(newState));
 }
 
 void DeviceBase::run() 

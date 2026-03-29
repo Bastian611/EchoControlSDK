@@ -76,8 +76,8 @@ void PrintHelp() {
 
     std::cout << "\n [Light 强光控制]\n";
     std::cout << "  l_sw <0/1>        : 强光总开关 (0: 关, 1: 开)\n";
-    std::cout << "  l_mode <1/2/3>    : 切换模式 (1: 不出光, 2: 炫目/绿光, 3: 照明/白光)\n";
-    std::cout << "  l_level <1-10>    : 设置功率等级 (1-10 档)\n";
+    //std::cout << "  l_mode <1/2/3>    : 切换模式 (1: 不出光, 2: 炫目/绿光, 3: 照明/白光)\n";
+    //std::cout << "  l_level <1-10>    : 设置功率等级 (1-10 档)\n";
     std::cout << "  l_strobe <0/1>    : 频闪开关 (注: 必须在强光主开关开启时调用)\n";
 
     std::cout << "\n [PTZ 云台控制]\n";
@@ -175,8 +175,19 @@ int main() {
             ss >> p >> t;
             ECCS_PTZ_SetAbsolutePos(g_hSystem, p, t);
         }
+        else if (cmd == "p_scan") {
+            float start, end;
+            ss >> start >> end;
+            ECCS_PTZ_SetScanRange(g_hSystem, start, end);
+        }
         else if (cmd == "p_reset") {
             ECCS_PTZ_Reset(g_hSystem);
+        }
+        else if (cmd == "p_startscan") {
+            ECCS_PTZ_StartScan(g_hSystem);
+        }
+        else if (cmd == "p_stopscan") {
+            ECCS_PTZ_StopScan(g_hSystem);
         }
         else if (cmd == "play") {
             int idx, loop; 
@@ -197,9 +208,13 @@ int main() {
             ss >> val;
             ECCS_Sound_SetPlayVolume(g_hSystem, val);
         }
+        else if (cmd == "getvol") {
+            int capVol, playVol;
+            ECCS_Sound_QueryPlayVolume(g_hSystem, &playVol, &capVol);
+        }
         else if (cmd == "list") {
             ECCS_SoundAudioList audioList;
-            std::cout << "Waiting for Device Sync (500ms timeout)..." << std::endl;
+            //std::cout << "Waiting for Device Sync (500ms timeout)..." << std::endl;
             ECCS_Error err = ECCS_Sound_QueryAudioList(g_hSystem, &audioList);
             if (err == ECCS_SUCCESS) {
                 std::cout << "--- Audio List (" << audioList.count << " files) ---" << std::endl;

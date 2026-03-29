@@ -270,10 +270,11 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Sound_SetPlayVolume(ECCS_HANDLE hDev, int volume);
 
     /** 
-     * @brief 同步获取当前播放音量 
-     * @param volume，音量值：0-100（dB）
+     * @brief 获取当前播放音量 
+     * @param playVolume，音量值：0-100（dB）
+     * @param capVolume，音量值：0-100（dB）
      */
-    ECCS_API ECCS_Error ECCS_Sound_QueryPlayVolume(ECCS_HANDLE hDev, int* volume);
+    ECCS_API ECCS_Error ECCS_Sound_QueryPlayVolume(ECCS_HANDLE hDev, int* playVolume, int* capVolume);
 
     /** 
      * @brief 获取设备内的音频列表 

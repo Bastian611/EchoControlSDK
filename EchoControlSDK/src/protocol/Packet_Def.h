@@ -107,7 +107,7 @@ namespace rpc {
     typedef Packet<_APP_RP_QUERY_ID_(DEVICE_SOUND, 2), u8>          RpQueryCapVolume;
 
     typedef Packet<_APP_RQ_QUERY_ID_(DEVICE_SOUND, 3), NoneData>    RqQueryPlayVolume;
-    typedef Packet<_APP_RP_QUERY_ID_(DEVICE_SOUND, 3), u8>          RpQueryPlayVolume;
+    typedef Packet<_APP_RP_QUERY_ID_(DEVICE_SOUND, 3), SoundVolume> RpQueryPlayVolume;
 
     // #############################################################
     // SETTING (≤Œ ˝≈‰÷√)

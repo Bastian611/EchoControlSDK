@@ -33,7 +33,7 @@ void InitModelMapping() {
     g_ModelToIDMap["YZ-BY010W"] = PTZ_YZ_BY010W::ID;
 
     // Sound
-    g_ModelToIDMap["NETSPEAKER-V2"] = Sound_NetSpeaker_V2::ID;
+    g_ModelToIDMap["NetSpeaker-V2"] = Sound_NetSpeaker_V2::ID;
 
     // Camera
     //g_ModelToIDMap["HSX-Vision"] = Camera_HSXVision::ID;

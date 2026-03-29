@@ -126,6 +126,11 @@ struct SoundPlayIndex {
     u8 loop;
 };
 
+struct SoundVolume {
+    u8 playVol;
+    u8 capVol;
+};
+
 struct SoundAudioList {
     u16 count;
     struct {

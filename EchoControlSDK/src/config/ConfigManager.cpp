@@ -54,7 +54,7 @@ DeviceBase* ConfigManager::GetDeviceByIndex(int index)
 
 int ConfigManager::ParseSlotID(const str& sectionName) 
 {
-    SMART_LOCK(m_devMutex);
+    //SMART_LOCK(m_devMutex);
     if (sectionName.find("Slot_") != 0) return -1;
     str numStr = sectionName.substr(5);
     return std::atoi(numStr.c_str());
@@ -155,7 +155,7 @@ ECCS_Error ConfigManager::LoadSystem(const str& rulePath, const str& paramPath)
             // 自动提取通用属性
             std::map<str, str> confMap = devParser.GetSection(secName);
 
-            if (dev->Init(slotID, confMap)) {
+            if (dev->Init(slotID, confMap) == ECCS_SUCCESS) {
                 dev->Start();
                 m_devices[slotID] = dev;
                 LOG_INFO("[ConfigManager] Device Created: Slot %d, Model %s", slotID, modelName.c_str());

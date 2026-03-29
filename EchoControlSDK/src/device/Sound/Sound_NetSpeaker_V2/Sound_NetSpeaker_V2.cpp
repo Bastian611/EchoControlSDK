@@ -5,10 +5,6 @@
 
 ECCS_BEGIN
 
-// =================================================
-// ctor / dtor
-// =================================================
-
 Sound_NetSpeaker_V2::Sound_NetSpeaker_V2()
 {
 }
@@ -24,7 +20,7 @@ Sound_NetSpeaker_V2::~Sound_NetSpeaker_V2()
 
 ECCS_Error Sound_NetSpeaker_V2::Init(int slotID, const std::map<str, str>& config)
 {
-    if (!DeviceBase::Init(slotID, config))
+    if (DeviceBase::Init(slotID, config) != ECCS_SUCCESS)
         return ECCS_ERR_NOT_INIT;
 
     m_ip = GetPropValue<str>("IP");
@@ -73,19 +69,33 @@ bool Sound_NetSpeaker_V2::SetSoundMode(SoundStatus mode)
 
     UpdateAudioSpec(mode);
 
+    char param[128];
     const char* model = "idle";
     switch (mode)
     {
-    case SoundStatus::Idle:         model = "idle"; break;
-    case SoundStatus::Player:       model = "player"; break;
-    case SoundStatus::OneKey:       model = "one_key"; break;
-    case SoundStatus::MicBroadcast: model = "mic_broadcast"; break;
+    case SoundStatus::Idle: {
+        model = "idle"; 
+        snprintf(param, sizeof(param), "\"model\":\"idle\"");
+        break;
+    }
+    case SoundStatus::Player: {
+        model = "player";
+        snprintf(param, sizeof(param), "\"model\":\"player\"");
+        break;
+    }
+    case SoundStatus::OneKey: {
+        model = "one_key";
+        snprintf(param, sizeof(param), "\"model\":\"one_key\"");
+        break;
+    }
+    case SoundStatus::MicBroadcast: {
+        model = "mic_broadcast"; 
+        snprintf(param, sizeof(param), "\"model\":\"mic_broadcast\"");
+        break;
+    }
     }
 
-    char param[128];
-    snprintf(param, sizeof(param), "\"model\":\"%s\",\"caller_port\":\"%d\"",
-        model, m_rxLocalPort.load());
-    bool ret = SendJsonCmd(BuildJson("model_change", param));
+    bool ret = SendJsonCmd("model_change", param);
 
     m_soundMode = mode;
     return ret;
@@ -104,34 +114,37 @@ ECCS_Error Sound_NetSpeaker_V2::PlayIndex(int index, bool loop)
         return ECCS_ERR_DEV_BUSY;
 
     m_loopPlay = loop;
+    msleep(100);
 
     char param[64];
     snprintf(param, sizeof(param),
         "\"index\":\"%d\",\"loop\":\"%d\"",
         index, loop ? 1 : 0);
 
-    SendJsonCmd(BuildJson("start_play", param));
+    SendJsonCmd("start_play", param, 5000);
     SetState(STATE_WORKING);
     return ECCS_SUCCESS;
 }
 
 ECCS_Error Sound_NetSpeaker_V2::StopPlay()
 {
-    SendJsonCmd(BuildJson("stop_play"));
-    SetSoundMode(SoundStatus::Idle);
-    SetState(STATE_ONLINE);
+    SendJsonCmd("stop_play", nullptr);
+    msleep(200);
+    //SetState(STATE_ONLINE);
+    if (!SetSoundMode(SoundStatus::Idle))
+        return ECCS_ERR_DEV_BUSY;
     return ECCS_SUCCESS;
 }
 
 ECCS_Error Sound_NetSpeaker_V2::Next()
 {
-    SendJsonCmd(BuildJson("next"));
+    SendJsonCmd("next_play", nullptr);
     return ECCS_SUCCESS;
 }
 
 ECCS_Error Sound_NetSpeaker_V2::Prev()
 {
-    SendJsonCmd(BuildJson("prev"));
+    SendJsonCmd("pre_play", nullptr);
     return ECCS_SUCCESS;
 }
 
@@ -149,7 +162,7 @@ ECCS_Error Sound_NetSpeaker_V2::MicSwitch(bool isOpen)
         snprintf(param, sizeof(param), "\"model\":\"idle\"");
         m_keepAudioTx = false;
     }
-    SendJsonCmd(BuildJson("model_change", param));
+    SendJsonCmd("model_change", param);
 
     SetState(STATE_WORKING);
     return ECCS_SUCCESS;
@@ -164,7 +177,7 @@ ECCS_Error Sound_NetSpeaker_V2::OneKeyPlay(int index)
 
     char param[64];
     snprintf(param, sizeof(param), "\"index\":\"%d\"", index);
-    SendJsonCmd(BuildJson("one_key_play", param));
+    SendJsonCmd("one_key_play", param);
 
     SetState(STATE_WORKING);
     return ECCS_SUCCESS;
@@ -176,14 +189,14 @@ ECCS_Error Sound_NetSpeaker_V2::SetPlayVolume(u8 vol)
 {
     char param[32];
     snprintf(param, sizeof(param), "\"vol\":\"%d\"", vol);
-    SendJsonCmd(BuildJson("set_play_vol", param));
+    SendJsonCmd("play_vol", param);
     m_playVolume = vol;
     return ECCS_SUCCESS;
 }
 
-ECCS_Error Sound_NetSpeaker_V2::GetPlayVolume(u8& vol) const
+ECCS_Error Sound_NetSpeaker_V2::GetPlayVolume(SoundVolume& sv)
 {
-    vol = m_playVolume;
+    QueryVolume();
     return ECCS_SUCCESS;
 }
 
@@ -191,18 +204,16 @@ ECCS_Error Sound_NetSpeaker_V2::SetCaptureVolume(u8 vol)
 {
     char param[32];
     snprintf(param, sizeof(param), "\"vol\":\"%d\"", vol);
-    SendJsonCmd(BuildJson("set_cap_vol", param));
+    SendJsonCmd("set_cap_vol", param);
     m_captureVolume = vol;
     return ECCS_SUCCESS;
 }
 
 // ---------- 音频列表 / 文件 ----------
 
-ECCS_Error Sound_NetSpeaker_V2::GetAudioList(std::vector<SoundFileInfo>& list)
+ECCS_Error Sound_NetSpeaker_V2::GetAudioList(SoundAudioList& list)
 {
-    list.clear();
-    for (auto& it : m_audioList)
-        list.push_back(it);
+    SendJsonCmd("get_play_list", nullptr, 2000);
     return ECCS_SUCCESS;
 }
 
@@ -236,7 +247,6 @@ ECCS_Error Sound_NetSpeaker_V2::UploadAudioFile(const str& name, const u8* data,
         return ECCS_ERR_NET_ERROR;
     }
 
-    return ECCS_SUCCESS;
     return ECCS_SUCCESS;
 }
 
@@ -276,30 +286,32 @@ void Sound_NetSpeaker_V2::OnCustomEvent(Event_Ptr& e)
 
 void Sound_NetSpeaker_V2::OnStateEnter(DevState state)
 {
-    if (state == STATE_ONLINE)
+    if (state == STATE_ONLINE || state == STATE_CONNECTING)
     {
-        // 设备信息 & 配置同步
-        QueryDeviceInfo();
-        QueryVolume();
-        QueryAudioList();
-
+        if (m_keepHeartbeat) 
+            return;
         // 心跳
         m_keepHeartbeat = true;
-        m_heartbeatThread = new std::thread(&Sound_NetSpeaker_V2::HeartbeatLoop, this);
+        if (!m_heartbeatThread)
+            m_heartbeatThread = new std::thread(&Sound_NetSpeaker_V2::HeartbeatLoop, this);
 
         // UDP 音频
         m_audioTxBuf = new RingBuffer(1024 * 100);
         m_keepAudioTx = true;
-        m_audioTxThread = new std::thread(&Sound_NetSpeaker_V2::AudioTxLoop, this);
+        if (!m_audioTxThread)
+            m_audioTxThread = new std::thread(&Sound_NetSpeaker_V2::AudioTxLoop, this);
 
         m_keepAudioRx = true;
-        m_audioRxThread = new std::thread(&Sound_NetSpeaker_V2::AudioRxLoop, this);
+        if (!m_audioRxThread)
+            m_audioRxThread = new std::thread(&Sound_NetSpeaker_V2::AudioRxLoop, this);
     }
 }
 
 void Sound_NetSpeaker_V2::OnStateExit(DevState state)
 {
-    if (state == STATE_ONLINE)
+    DevState nextState = GetState();
+    //if (state == STATE_ONLINE)
+    if (nextState == STATE_OFFLINE || nextState == STATE_ERROR)
     {
         m_keepHeartbeat = false;
         m_keepAudioTx = false;
@@ -376,11 +388,11 @@ void Sound_NetSpeaker_V2::Disconnect()
 // JSON / 线程
 // =================================================
 
-str Sound_NetSpeaker_V2::BuildJson(const char* cmd, const char* params)
+str Sound_NetSpeaker_V2::BuildJson(const char* cmd, const char* params, int seq)
 {
     char buf[512];
-    int seq = ++m_cseq;
-    m_waitingCseq = seq;
+    //int seq = ++m_cseq;
+    //m_waitingCseq = seq;
 
     if (params)
         snprintf(buf, sizeof(buf),
@@ -394,19 +406,30 @@ str Sound_NetSpeaker_V2::BuildJson(const char* cmd, const char* params)
     return str(buf);
 }
 
-bool Sound_NetSpeaker_V2::SendJsonCmd(const str& json, int timeout_ms)
+bool Sound_NetSpeaker_V2::SendJsonCmd(const char* cmd, const char* params, int timeout_ms)
 {
     if (!Connect())
         return false;
-
     try
     {
-        m_ackSem.try_wait(); // 确保信号量处于 0 状态
+        // 分配序号并记录
+        int seq = ++m_cseq;
+        m_waitingCseq = seq;
+
+        // 生成 JSON
+        str json = BuildJson(cmd, params, seq);
+
+        // 清空信号量之前的残留状态
+        while (m_ackSem.try_wait());
         m_ctrlSocket->write((const u8*)json.c_str(), json.size());
+        LOG_DEBUG("[NetSpeaker] write: %s", json.c_str());
         
         // 等待信号量，超时时间由参数决定
         if (m_ackSem.wait_for(ECCS_C11 chrono::milliseconds(timeout_ms))) {
             return m_lastAckResult; // 被 HandleJsonReply 唤醒，返回结果
+        }
+        else if (m_lastAckResult) {
+            return true;
         }
         else {
             LOG_WARNING("[NetSpeaker] Command timeout (cseq: %d)", m_waitingCseq.load());
@@ -415,8 +438,8 @@ bool Sound_NetSpeaker_V2::SendJsonCmd(const str& json, int timeout_ms)
     }
     catch (...)
     {
-        SetState(STATE_ERROR);
         m_ctrlSocket->close();
+        SetState(STATE_ERROR);
         return false;
     }
 }
@@ -484,7 +507,13 @@ static bool ExtractInt(const str& src, const char* key, int& out)
     if (p == str::npos) return false;
 
     p = src.find(':', p);
-    out = atoi(src.c_str() + p + 1);
+    if (p == str::npos) return false;
+
+    // 寻找第一个数字字符
+    size_t start = src.find_first_of("0123456789", p);
+    if (start == str::npos) return false;
+
+    out = atoi(src.c_str() + start);
     return true;
 }
 
@@ -495,37 +524,43 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
     str cmd, code;
     if (!ExtractStr(json, "command", cmd)) return;
 
-    // 检查是否有 code 回复
-    if (ExtractStr(json, "code", code)) {
-        int receivedCseq = -1;
-        ExtractInt(json, "cseq", receivedCseq);
-
+    int receivedCseq = -1;
+    
+    if (ExtractInt(json, "cseq", receivedCseq)) {
         if (receivedCseq == m_waitingCseq.load()) {
-            m_lastAckResult = (code == "200");
-            m_ackSem.notify(); // 唤醒主线程
-        }
-        if (code == "200") {
-            LOG_INFO("[NetSpeaker] Command Success Confirmed");
-            // 根据当前正在进行的模式更新状态
-            if (m_soundMode == SoundStatus::Player || m_soundMode == SoundStatus::OneKey) {
-                SetState(STATE_WORKING); 
+            m_lastAckResult = true; // 只要收到了对应的 cseq，就认为链路通了
+            if (ExtractStr(json, "code", code)) {
+                m_lastAckResult = (code == "200");
             }
-            else if (m_soundMode == SoundStatus::Idle) {
-                SetState(STATE_ONLINE); 
-            }
-
-            // 触发用户回调
-            DeviceStatus ds;
-            ds.state = GetState();
-            ds.deviceType = m_deviceID.GetDeviceType();
-            ds.deviceIndex = m_deviceID.GetIndex();
-            auto pkt = std::make_shared<rpc::OwDeviceStatus>(ds);
-            if (m_statusCb) m_statusCb(pkt);
+            m_ackSem.notify();
+            LOG_INFO("[NetSpeaker] Command %s ACK Confirmed (cseq: %d)", cmd.c_str(), receivedCseq);
         }
-        else if (code == "400") {
-            LOG_ERROR("[NetSpeaker] Command %s rejected by device (Code 400)", cmd.c_str());
-            SetState(STATE_ERROR, 400);
+    }
+    if (code == "200") {
+        //if (cmd == "stop_play") {
+        //    SetState(STATE_ONLINE); // 停止成功，回到就绪态
+        //}
+        //else if (cmd == "start_play") {
+        //    SetState(STATE_WORKING); // 播放成功，进入工作态
+        //}
+        // 根据当前正在进行的模式更新状态
+        if (m_soundMode == SoundStatus::Player || m_soundMode == SoundStatus::OneKey) {
+            SetState(STATE_WORKING); 
         }
+        else if (m_soundMode == SoundStatus::Idle) {
+            SetState(STATE_ONLINE); 
+        }
+        // 触发用户回调
+        DeviceStatus ds;
+        ds.state = GetState();
+        ds.deviceType = m_deviceID.GetDeviceType();
+        ds.deviceIndex = m_deviceID.GetIndex();
+        auto pkt = std::make_shared<rpc::OwDeviceStatus>(ds);
+        if (m_statusCb) m_statusCb(pkt);
+    }
+    else if (code == "400") {
+        LOG_ERROR("[NetSpeaker] Command %s rejected by device (Code 400)", cmd.c_str());
+        SetState(STATE_ERROR, 400);
     }
 
     // ---------- 状态 ----------
@@ -545,44 +580,54 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
     else if (cmd == "post_vol")
     {
         int v;
-        if (ExtractInt(json, "play_vol", v))
+        if (ExtractInt(json, "play_vol", v)) 
             m_playVolume = (u8)v;
-        if (ExtractInt(json, "cap_vol", v))
+        if (ExtractInt(json, "cap_vol", v)) 
             m_captureVolume = (u8)v;
+        SoundVolume sv;
+        sv.playVol = m_playVolume;
+        sv.capVol = m_captureVolume;
+        auto rpPkt = std::make_shared<rpc::RpQueryPlayVolume>(sv);
+        if (m_statusCb)
+            m_statusCb(rpPkt);
     }
 
     // ---------- 播放列表 ----------
     else if (cmd == "get_play_list")
     {
-        m_audioList.clear();
+        //SoundAudioList rpList;
+        auto rpList = std::make_unique<SoundAudioList>();
+        memset(rpList.get(), 0, sizeof(SoundAudioList));
 
         size_t arrBeg = json.find('[');
         size_t arrEnd = json.find(']', arrBeg);
-        if (arrBeg == str::npos || arrEnd == str::npos)
-            return;
+        if (arrBeg != str::npos && arrEnd != str::npos) {
+            str arr = json.substr(arrBeg + 1, arrEnd - arrBeg - 1);
+            size_t p = 0;
+            int count = 0;
+            while ((p = arr.find('{', p)) != str::npos && count < 200) {
+                size_t e = arr.find('}', p);
+                if (e == str::npos) break;
+                str obj = arr.substr(p + 1, e - p - 1);
 
-        str arr = json.substr(arrBeg + 1, arrEnd - arrBeg - 1);
-        size_t p = 0;
+                int idx = 0; str name;
+                ExtractInt(obj, "index", idx);
+                ExtractStr(obj, "name", name);
 
-        while ((p = arr.find('{', p)) != str::npos)
-        {
-            size_t e = arr.find('}', p);
-            if (e == str::npos) break;
+                // 路径截断
+                const str prefix = "/xmedia/mp3/";
+                if (name.find(prefix) == 0) name = name.substr(prefix.size());
 
-            str obj = arr.substr(p + 1, e - p - 1);
-
-            SoundFileInfo info{};
-            ExtractInt(obj, "index", info.index);
-            ExtractInt(obj, "duration", (int&)info.duration);
-            ExtractStr(obj, "name", info.name);
-
-            const str prefix = "/xmedia/mp3/";
-            if (info.name.find(prefix) == 0)
-                info.name = info.name.substr(prefix.size());
-
-            m_audioList.push_back(info);
-            p = e + 1;
+                rpList->files[count].index = idx;
+                strncpy(rpList->files[count].name, name.c_str(), 63);
+                count++;
+                p = e + 1;
+            }
+            rpList->count = (u16)count;
         }
+
+        auto rpPkt = std::make_shared<rpc::RpQueryAudioList>(*rpList);
+        if (m_statusCb) m_statusCb(rpPkt);
     }
 
     // ---------- 上传 MP3 / 报警音频 ACK ----------
@@ -603,7 +648,7 @@ void Sound_NetSpeaker_V2::HeartbeatLoop()
 
         if (IsOnline())
         {
-            SendJsonCmd(BuildJson("online"));
+            SendJsonCmd("online", nullptr);
         }
     }
 }
@@ -639,8 +684,6 @@ void Sound_NetSpeaker_V2::AudioTxLoop()
             int len = m_audioTxBuf->Read(buf, triggerSize);
             if (len > 0) {
                 udp.write(buf, len);
-                // 网线直连下，仅做极微小休眠防止 CPU 100%
-                // 具体的发送节奏由应用层往 RingBuffer 写的速度决定
                 msleep(spec.intervalMs);
             }
         }
@@ -687,19 +730,22 @@ void Sound_NetSpeaker_V2::AudioRxLoop()
 
 bool Sound_NetSpeaker_V2::QueryDeviceInfo()
 {
-    SendJsonCmd(BuildJson("get_device_info"));
+    SendJsonCmd("get_device_info", nullptr);
     return true;
 }
 
 bool Sound_NetSpeaker_V2::QueryVolume()
 {
-    SendJsonCmd(BuildJson("get_volume"));
+    SendJsonCmd("get_vol", nullptr);
     return true;
 }
 
 bool Sound_NetSpeaker_V2::QueryAudioList()
 {
-    SendJsonCmd(BuildJson("get_audio_list"));
+    SendJsonCmd("reload_play_list", nullptr, 1000);
+
+    msleep(200); // 给硬件一点处理 IO 的时间
+    SendJsonCmd("get_play_list", nullptr);
     return true;
 }
 

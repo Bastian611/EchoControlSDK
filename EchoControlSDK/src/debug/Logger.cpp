@@ -347,18 +347,18 @@ void Logger::initLogger(const char* log_path,const char* backup_path,const char*
     memset(buf,0,512);
     if(have_sublog)
     {
-        iRet = snprintf(buf, sizeof(buf), "%s/%s_%04d%02d%02d_%02d%02d%02d.log", log_path_buf,prefix_for_operate,
-            dt.year, dt.mon, dt.day, dt.hour, dt.min, dt.sec);
-        assert(iRet > 0);
-        m_fout_operate = fopen(buf, "w+");
-        if (m_fout_operate){
-            fprintf(m_fout_operate, "---------- %04d-%02d-%02d %02d:%02d:%02d.%03d ----------\n\n",
-                dt.year, dt.mon, dt.day, dt.hour, dt.min, dt.sec, dt.ms);
-        }
-        iRet = snprintf(buf, sizeof(buf), "%s/eccs-data_%04d%02d%02d_%02d%02d%02d.log", log_path_buf,
-            dt.year, dt.mon, dt.day, dt.hour, dt.min, dt.sec);
-        assert(iRet > 0);
-        m_fout_record = fopen(buf, "w+");
+        //iRet = snprintf(buf, sizeof(buf), "%s/%s_%04d%02d%02d_%02d%02d%02d.log", log_path_buf,prefix_for_operate,
+        //    dt.year, dt.mon, dt.day, dt.hour, dt.min, dt.sec);
+        //assert(iRet > 0);
+        //m_fout_operate = fopen(buf, "w+");
+        //if (m_fout_operate){
+        //    fprintf(m_fout_operate, "---------- %04d-%02d-%02d %02d:%02d:%02d.%03d ----------\n\n",
+        //        dt.year, dt.mon, dt.day, dt.hour, dt.min, dt.sec, dt.ms);
+        //}
+        //iRet = snprintf(buf, sizeof(buf), "%s/eccs-data_%04d%02d%02d_%02d%02d%02d.log", log_path_buf,
+        //    dt.year, dt.mon, dt.day, dt.hour, dt.min, dt.sec);
+        //assert(iRet > 0);
+        //m_fout_record = fopen(buf, "w+");
     }
     m_lastLog.restart();
     m_time_from_start_log = 0;

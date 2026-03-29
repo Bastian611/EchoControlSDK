@@ -51,10 +51,10 @@ public:
 
     // --- 音量 ---
     virtual ECCS_Error SetPlayVolume(u8 vol) override;
-    virtual ECCS_Error GetPlayVolume(u8& vol) const override;
+    virtual ECCS_Error GetPlayVolume(SoundVolume& sv) override;
     virtual ECCS_Error SetCaptureVolume(u8 vol) override;
 
-    virtual ECCS_Error GetAudioList(std::vector<SoundFileInfo>& list) override;
+    virtual ECCS_Error GetAudioList(SoundAudioList& list) override;
 
     virtual ECCS_Error UploadAudioFile(const str& name, const u8* data, u32 len) override;
 
@@ -78,8 +78,8 @@ protected:
     bool Connect();
     void Disconnect();
 
-    bool SendJsonCmd(const str& json, int timeout_ms = 2000);
-    str  BuildJson(const char* cmd, const char* params = nullptr);
+    bool SendJsonCmd(const char* cmd, const char* params, int timeout_ms = 2000);
+    str  BuildJson(const char* cmd, const char* params, int seq);
     void CtrlRxLoop();
     void HandleJsonReply(const str& json);
 
@@ -159,6 +159,7 @@ private:
     Semaphore m_ackSem;
     std::atomic<int> m_waitingCseq{ -1 }; // 正在等待回复的序列号
     bool m_lastAckResult{ false };   // 暂存回复结果
+    std::recursive_mutex m_cmdMtx;
 };
 
 ECCS_END

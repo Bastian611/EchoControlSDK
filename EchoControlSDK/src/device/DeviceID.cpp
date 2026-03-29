@@ -20,9 +20,11 @@ namespace did {
     const char* LightModelStr(LightModel model) 
     {
         switch (model) {
-        case LIGHT_PT_LD_1307: return "PT-LD-1307";
-        case LIGHT_HL_525_4W:  return "HL-525-4W";
-        default:               return "Unknown-Light";
+        case LIGHT_PT_LD_1307:  return "PT-LD-1307";
+        case LIGHT_HL_525_4W:   return "HL-525-4W";
+        case LIGHT_RGB_V3:      return "RGB-V3";
+        case LIGHT_GREEN_SMALL: return "Green_Small";
+        default:                return "Unknown-Light";
         }
     }
 

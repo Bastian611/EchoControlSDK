@@ -105,8 +105,8 @@ ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val, TRes
     auto pkt = std::make_shared<TRqPacket>(val);
     dev->ExecutePacket(pkt);
 
-    // 阻塞等待 500ms
-    if (syncSem.wait_for(ECCS_C11 chrono::milliseconds(500))) {
+    // 阻塞等待
+    if (syncSem.wait_for(ECCS_C11 chrono::milliseconds(3000))) {
         if (outData)
             *outData = result;
     }
@@ -129,6 +129,10 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Init()
     {
         try {
+            ECCS Logger::getInstance()->initLogger("./log", nullptr, "eccs", false);
+            //LOG_INFO("==================================================");
+            //LOG_INFO("EchoControl SDK Version %s Starting...", ECCS_VER_STR);
+            //LOG_INFO("==================================================");
         	ConfigManager::getInstance()->LoadSystem(DEFAULT_RULE_PATH, DEFAULT_DEV_PATH);
         	return ECCS_SUCCESS;
         }
@@ -315,18 +319,25 @@ extern "C" {
         return PostPkt<rpc::RqSetSoundPlayVolume, rpc::RpSetSoundPlayVolume>(hDev, did::DEVICE_SOUND, (u8)volume, &result);
     }
 
-    ECCS_API ECCS_Error ECCS_Sound_QueryPlayVolume(ECCS_HANDLE hDev, int* volume)
+    ECCS_API ECCS_Error ECCS_Sound_QueryPlayVolume(ECCS_HANDLE hDev, int* playVolume, int* capVolume)
     {
-        Result result;
-        return PostPkt<rpc::RqQueryPlayVolume, rpc::RpQueryPlayVolume>(hDev, did::DEVICE_SOUND, rpc::NoneData(), volume);
+        ECCS_Error result;
+        SoundVolume sv;
+        result = PostPkt<rpc::RqQueryPlayVolume, rpc::RpQueryPlayVolume>(hDev, 
+            did::DEVICE_SOUND, rpc::NoneData(), &sv);
+        *playVolume = sv.playVol;
+        *capVolume = sv.capVol;
+        LOG_DEBUG("cap: %d play %d", *capVolume, *playVolume);
+        return result;
     }
 
     ECCS_API ECCS_Error ECCS_Sound_QueryAudioList(ECCS_HANDLE hDev, ECCS_SoundAudioList* list)
     {
         if (!list) 
             return ECCS_ERR_INVALID_PARAM;
-        return PostPkt<rpc::RqQueryAudioList, rpc::RpQueryAudioList>
+        ECCS_Error ret = PostPkt<rpc::RqQueryAudioList, rpc::RpQueryAudioList>
             (hDev, did::DEVICE_SOUND, rpc::NoneData(), (SoundAudioList*)list);
+        return ret;
     }
 
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen) 

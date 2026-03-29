@@ -187,10 +187,17 @@ EchoControlHandler::EchoControlHandler() {
         ptz->PtzQueryPosition();
         });
 
+    Register<rpc::RqQueryPlayVolume>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ISound_Device, sound);
+        CAST_PKT(rpc::RqQueryPlayVolume, req);
+        SoundVolume sv;
+        sound->GetPlayVolume(sv);
+        });
+
     Register<rpc::RqQueryAudioList>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
-        std::vector<SoundFileInfo> dummy;
-        sound->GetAudioList(dummy);
+        SoundAudioList list;
+        sound->GetAudioList(list);
         });
 
     // =======================================================

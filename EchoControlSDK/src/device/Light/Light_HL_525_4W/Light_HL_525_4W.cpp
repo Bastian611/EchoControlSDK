@@ -12,7 +12,8 @@ Light_HL_525_4W::~Light_HL_525_4W() {
 
 ECCS_Error Light_HL_525_4W::Init(int slotID, const std::map<str, str>& config) {
     // 基类初始化
-    if (!DeviceBase::Init(slotID, config)) return ECCS_ERR_NOT_INIT;
+    if (DeviceBase::Init(slotID, config) != ECCS_SUCCESS) 
+        return ECCS_ERR_NOT_INIT;
 
     // 获取配置
     m_ip = GetPropValue<str>("IP");
@@ -60,6 +61,13 @@ ECCS_Error Light_HL_525_4W::SendHexCmd(u8 cmd, u8 vh, u8 vl) {
 
     try {
         m_socket->write(buf, 7);
+        std::string hexStr;
+        char tmp[4];
+        for (int i = 0; i < 7; ++i) {
+            snprintf(tmp, sizeof(tmp), "%02X ", buf[i]);
+            hexStr += tmp;
+        }
+        LOG_DEBUG("[NetSpeaker] Hex: %s", hexStr.c_str());
         return ECCS_SUCCESS;
     }
     catch (std::exception& e) {

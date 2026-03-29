@@ -74,7 +74,7 @@ public:
         return ECCS_ERR_NOT_SUPPORTED;
     }
 
-    virtual ECCS_Error GetPlayVolume(u8& vol) const
+    virtual ECCS_Error GetPlayVolume(SoundVolume& sv)
     {
         return ECCS_ERR_NOT_SUPPORTED;
     }
@@ -93,7 +93,7 @@ public:
     // =================================================
     // 音频列表 / 文件管理
     // =================================================
-    virtual ECCS_Error GetAudioList(std::vector<SoundFileInfo>& list)
+    virtual ECCS_Error GetAudioList(SoundAudioList& list)
     {
         LOG_WARNING("[Slot %d] Device does not support GetAudioList()", m_slotID);
         return ECCS_ERR_NOT_SUPPORTED;
