@@ -55,6 +55,8 @@ protected:
     // 实现协议解析
     virtual void OnRawDataReceived(const u8* data, u32 len) override;
 
+    virtual void OnStateEnter(DevState state) override;
+
 private:
     str m_ip;
     int m_port;

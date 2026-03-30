@@ -46,7 +46,8 @@ struct AudioSpec {
 enum class RGB_V3_LightMode : u8 {
     Off = 1,        // 不出光
     Blingding = 2,  // 炫目模式
-    Lighting = 3    // 照明模式
+    Lighting = 3,   // 照明模式
+    QueryStatus = 8 // 设备状态查询
 };
 
 // 调焦参数

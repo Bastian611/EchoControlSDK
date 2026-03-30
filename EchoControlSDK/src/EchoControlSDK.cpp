@@ -203,6 +203,58 @@ extern "C" {
         return ECCS_SUCCESS;
     }
 
+    // 系统级控制
+    ECCS_API ECCS_Error ECCS_OneKey_Start(ECCS_HANDLE hDev) {
+        CHECK_INIT_AND_GET_MGR();
+
+        // 获取当前存储的一键拒止参数
+        ECCS_OneKeyParams p = mgr->GetOneKeyParams();
+
+        // 1. 校验强声列表 (假设已经通过 QueryAudioList 缓存)
+        if (!mgr->ValidateSoundIndex(p.soundTrackIndex)) {
+            LOG_ERROR("OneKey Start Failed: Sound Index %d not found.", p.soundTrackIndex);
+            return ECCS_ERR_INVALID_PARAM;
+        }
+
+        // 2. 执行序列化宏动作 (带 50ms 间隔保护电源)
+        // A. 设置云台：速度 -> 范围 -> 启动
+        ECCS_PTZ_SetScanSpeed(hDev, p.ptzScanSpeed);
+        msleep(50);
+        ECCS_PTZ_SetScanRange(hDev, p.ptzScanStart, p.ptzScanEnd);
+        msleep(50);
+        ECCS_PTZ_StartScan(hDev);
+        msleep(50);
+
+        // B. 设置强光：模式(白/绿) -> 开启 -> 频闪
+        ECCS_Light_SetLevel(hDev, p.lightLevel);
+        msleep(50);
+        ECCS_Light_SetSwitch(hDev, 1);
+        msleep(50);
+        ECCS_Light_SetStrobe(hDev, p.lightStrobe);
+        msleep(50);
+
+        // C. 开启强声：音量 -> 播放
+        ECCS_Sound_SetPlayVolume(hDev, p.soundVolume);
+        msleep(50);
+        ECCS_Sound_Play(hDev, p.soundTrackIndex, p.soundLoop);
+
+        LOG_INFO(">>> One-Key Deterrence ACTIVATED <<<");
+        return ECCS_SUCCESS;
+    }
+
+    // 内部一键拒止停止逻辑 (软急停)
+    ECCS_API ECCS_Error ECCS_OneKey_Stop(ECCS_HANDLE hDev) {
+        // 停止不设间隔，追求响应速度
+        ECCS_Sound_Stop(hDev);
+        ECCS_Light_SetStrobe(hDev, 0);
+        ECCS_Light_SetSwitch(hDev, 0);
+        ECCS_PTZ_StopScan(hDev);
+
+        LOG_INFO(">>> One-Key Deterrence STOPPED <<<");
+        return ECCS_SUCCESS;
+    }
+
+
     // --- Light ---
     ECCS_API ECCS_Error ECCS_Light_SetSwitch(ECCS_HANDLE hDev, int isOpen)
     {
@@ -255,6 +307,11 @@ extern "C" {
         Result result;
         PtzScanRange data = { start, end };
         return PostPkt<rpc::RqSetPtzScanRange, rpc::RpSetPtzScanRange>(hDev, did::DEVICE_PTZ, data, &result);
+    }
+
+    ECCS_API ECCS_Error ECCS_PTZ_SetScanSpeed(ECCS_HANDLE hDev, int speed)
+    {
+
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_StartScan(ECCS_HANDLE hDev) 

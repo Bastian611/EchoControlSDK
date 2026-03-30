@@ -74,6 +74,40 @@ extern "C" {
         ECCS_AudioFileInfo files[200];
     } ECCS_SoundAudioList;
 
+    /**
+     * @brief 一键拒止业务参数集
+     * 涵盖声、光、电三个维度的预设执行参数
+     */
+    typedef struct {
+        // =================================================
+        // 强声 (Sound) 参数
+        // =================================================
+        unsigned char soundVolume;      // 播放音量: 0-100
+        int           soundTrackIndex;  // 预设音频索引 (需提前刷新列表确认索引存在)
+        unsigned char soundLoop;        // 循环模式: 1=循环播放, 0=单次播放
+
+        // =================================================
+        // 强光 (Light) 参数
+        // =================================================
+        unsigned char lightMode;        // 工作模式: 1:不出光, 2:炫目/绿, 3:照明/白
+        unsigned char lightLevel;       // 功率/亮度档位: 1-10（部分型号不支持）
+        unsigned char lightStrobe;      // 频闪控制: 1=开启, 0=关闭
+
+        // =================================================
+        // 云台 (PTZ) 参数
+        // =================================================
+        float         ptzScanStart;     // 水平线扫起始角度: 0.00°- 359.99°
+        float         ptzScanEnd;       // 水平线扫终止角度: 0.00°- 359.99°
+        float         ptzTiltAngle;     // 线扫时的固定俯仰角: -90.00° - 90.00° (确保指向目标区域)
+        unsigned char ptzScanSpeed;     // 线扫运动速度: 1 - 64
+
+        // =================================================
+        // 策略 (Global) 参数
+        // =================================================
+        unsigned int  actionDuration;   // 动作持续时间: 单位秒。0表示不限时(手动停止)，>0则倒计时自动关闭
+        unsigned char reserved[7];      // 预留位
+    } ECCS_OneKeyParams;
+
 #pragma pack(pop)
 
     // =======================================================
@@ -149,6 +183,27 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Device_Disconnect(ECCS_HANDLE hDev);
 
     // =======================================================
+    // 系统级控制
+    // =======================================================
+
+    /** @brief 启动一键拒止 (宏动作：设置参数->线扫->强光->播放) */
+    ECCS_API ECCS_Error ECCS_OneKey_Start(ECCS_HANDLE hDev);
+
+    /** @brief 停止一键拒止 (宏动作：关闭声、光、电) */
+    ECCS_API ECCS_Error ECCS_OneKey_Stop(ECCS_HANDLE hDev);
+
+    /**
+     * @brief 设置一键拒止参数
+     * @param params，一键拒止参数
+     */
+    ECCS_API ECCS_Error ECCS_OneKey_SetParams(ECCS_HANDLE hDev, const ECCS_OneKeyParams* params);
+    /**
+     * @brief 读取一键拒止参数
+     * @param outParams，一键拒止参数
+     */
+    ECCS_API ECCS_Error ECCS_OneKey_GetParams(ECCS_HANDLE hDev, ECCS_OneKeyParams* outParams);
+
+    // =======================================================
     // 强光控制
     // =======================================================
 
@@ -209,6 +264,12 @@ extern "C" {
      * @param end，  线扫终止角度: 0°-359.99°
      */
     ECCS_API ECCS_Error ECCS_PTZ_SetScanRange(ECCS_HANDLE hDev, float start, float end);
+
+    /**
+     * @brief 设置线扫速度
+     * @param speed，线扫速度:
+     */
+    ECCS_API ECCS_Error ECCS_PTZ_SetScanSpeed(ECCS_HANDLE hDev, int speed);
 
     /** 
      * @brief 开启自动线扫 

@@ -111,25 +111,55 @@ void Light_RGB_V3::OnRawDataReceived(const u8* data, u32 len) {
 }
 
 void Light_RGB_V3::ParseFeedback(const u8* d) {
-    // 字节 14-15 (索引 13-14): 角度 (10倍)
-    u16 angleRaw = (d[13] << 8) | d[14];
-    m_actualAngle = angleRaw / 10.0f;
-
-    // 字节 16 (索引 15): 温度
-    m_devTemp = (float)d[15];
-
-    // 字节 18 (索引 17): 错误码
-    u8 err = d[17];
-    if (err != 0) SetState(STATE_ERROR, err);
-
-    // 推送状态包（可选）
+    // 推送状态包
     DeviceStatus ds;
-    ds.deviceType = m_deviceID.GetDeviceType();
-    ds.deviceIndex = m_deviceID.GetIndex();
+
+    // 字节 9 指令是否错误
+    u8 code = d[8];
+    if (code != 0) {
+        ds.deviceType = m_deviceID.GetDeviceType();
+        ds.deviceIndex = m_deviceID.GetIndex();
+        SetState(STATE_ERROR, 0);
+    }
+    else {
+        // 字节 3: 工作模式
+        m_curMode = (RGB_V3_LightMode)d[2];
+
+        // 字节 4: 功率
+        m_curPower = d[3];
+
+        // 字节 5-7: 聚焦模式及参数
+        m_curFocusType = (RGB_V3_FocusType)d[4];
+        m_curFocusValue = (d[5] << 8) | d[6];
+
+        // 字节 8: 闪烁频率
+        m_curFlashHz = d[7];
+
+        // 字节 10-11: 电机实际步数
+        u16 dist = (d[11] << 8) | d[12];
+        m_curDist = dist / 10.0f;
+
+        // 字节 14-15 (索引 13-14): 角度 (10倍)
+        u16 angleRaw = (d[13] << 8) | d[14];
+        m_actualAngle = angleRaw / 10.0f;
+
+        // 字节 16 (索引 15): 设备实际温度
+        m_devTemp = (float)d[15];
+
+        // 字节 17: 设备报警温度
+        m_warnTemp = (float)d[16];
+
+        // 字节 18 (索引 17): 错误码
+        u8 err = d[17];
+        if (err != 0) 
+            SetState(STATE_ERROR, err);
+    }
+
     ds.state = (u8)GetState();
     ds.temperature = m_devTemp.load();
     auto pkt = std::make_shared<rpc::OwDeviceStatus>(ds);
-    if (m_statusCb) m_statusCb(pkt);
+    if (m_statusCb) 
+        m_statusCb(pkt);
 }
 
 bool Light_RGB_V3::Connect() {
@@ -150,7 +180,8 @@ bool Light_RGB_V3::Connect() {
 }
 
 int Light_RGB_V3::ReadRaw(u8* buf, u32 maxLen) {
-    if (!m_socket || !m_socket->isOpen()) return -1;
+    if (!m_socket || !m_socket->isOpen())
+        return -1;
     return m_socket->read(buf, maxLen);
 }
 
