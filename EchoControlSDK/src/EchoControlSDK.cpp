@@ -171,11 +171,10 @@ extern "C" {
                 auto p = std::dynamic_pointer_cast<rpc::OwPtzPosition>(pkt);
                 if (p) cb(hDev, ECCS_EVT_PTZ_ANGLE, &p->data, sizeof(p->data), userCtx);
             }
-            else if (id == rpc::OwSoundPlayStatus::_FACTORY_ID_) {
-                auto p = std::dynamic_pointer_cast<rpc::OwSoundPlayStatus>(pkt);
+            else if (id == rpc::OwSoundStatus::_FACTORY_ID_) {
+                auto p = std::dynamic_pointer_cast<rpc::OwSoundStatus>(pkt);
                 // 仅当播放完成时通知应用层
-                if (p && p->data.playState == SoundPlayState::Finished)
-                cb(hDev, ECCS_EVT_SOUND_FINISH, nullptr, 0, userCtx);
+                if (p) cb(hDev, ECCS_EVT_SOUND_MODE_CHANGE, nullptr, 0, userCtx);
             }
         };
 

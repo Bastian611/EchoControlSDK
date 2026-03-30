@@ -79,6 +79,8 @@ namespace rpc {
     FACTORY_ID_APPEND(RpQueryCapVolume, RpcPacket)
     FACTORY_ID_APPEND(RqQueryPlayVolume, RpcPacket)
     FACTORY_ID_APPEND(RpQueryPlayVolume, RpcPacket)
+    FACTORY_ID_APPEND(RqQuerySoundStatus, RpcPacket)
+    FACTORY_ID_APPEND(RpQuerySoundStatus, RpcPacket)
 
     // --- PTZ ---
     FACTORY_ID_APPEND(RqQueryPtzPos, RpcPacket)
@@ -119,7 +121,7 @@ namespace rpc {
     // #############################################################
 
     FACTORY_ID_APPEND(OwLightStatus, RpcPacket)
-    FACTORY_ID_APPEND(OwSoundPlayStatus, RpcPacket)
+    FACTORY_ID_APPEND(OwSoundStatus, RpcPacket)
     FACTORY_ID_APPEND(OwPtzPosition, RpcPacket)
     FACTORY_ID_APPEND(OwDeviceStatus, RpcPacket)
 

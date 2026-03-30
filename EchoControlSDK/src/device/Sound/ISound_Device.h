@@ -23,6 +23,11 @@ public:
         return SoundStatus::Idle;
     }
 
+    virtual ECCS_Error QuerySoundStatus(SoundStatus ss)
+    {
+        return ECCS_SUCCESS;
+    }
+
     // =================================================
     // 播放控制
     // =================================================
@@ -133,11 +138,11 @@ public:
     // =================================================
     // 回调：播放状态
     // =================================================
-    using PlayStateCallback = std::function<void(SoundPlayState)>;
+    using SoundStatusCallback = std::function<void(SoundStatus)>;
 
-    void SetPlayStateCallback(PlayStateCallback cb)
+    void SetSoundStatusCallback(SoundStatusCallback cb)
     {
-        m_playStateCb = cb;
+        m_soundStatusCb = cb;
     }
 
 protected:
@@ -150,10 +155,10 @@ protected:
             m_audioCb(data, len);
     }
 
-    void NotifyPlayState(SoundPlayState state)
+    void NotifyPlayState(SoundStatus state)
     {
-        if (m_playStateCb)
-            m_playStateCb(state);
+        if (m_soundStatusCb)
+            m_soundStatusCb(state);
     }
 
     bool IsSoundOnline() const
@@ -163,8 +168,8 @@ protected:
     }
 
 protected:
-    AudioCallback     m_audioCb;
-    PlayStateCallback m_playStateCb;
+    AudioCallback       m_audioCb;
+    SoundStatusCallback m_soundStatusCb;
 };
 
 ECCS_END

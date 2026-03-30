@@ -37,6 +37,7 @@ public:
     // --- 模式 ---
     virtual bool SetSoundMode(SoundStatus mode) override;
     virtual SoundStatus GetSoundMode() const override;
+    virtual ECCS_Error QuerySoundStatus(SoundStatus ss) override;
 
     // --- 播放控制 ---
     virtual ECCS_Error PlayIndex(int index, bool loop = false) override;

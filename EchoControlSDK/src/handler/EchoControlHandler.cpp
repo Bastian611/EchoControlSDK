@@ -194,6 +194,13 @@ EchoControlHandler::EchoControlHandler() {
         sound->GetPlayVolume(sv);
         });
 
+    Register<rpc::RqQuerySoundStatus>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ISound_Device, sound);
+        CAST_PKT(rpc::RqQuerySoundStatus, req);
+        SoundStatus ss;
+        sound->QuerySoundStatus(ss);
+        });
+
     Register<rpc::RqQueryAudioList>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
         SoundAudioList list;

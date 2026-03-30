@@ -106,6 +106,15 @@ SoundStatus Sound_NetSpeaker_V2::GetSoundMode() const
     return m_soundMode.load();
 }
 
+ECCS_Error Sound_NetSpeaker_V2::QuerySoundStatus(SoundStatus ss)
+{
+    bool ret = SendJsonCmd("get_status", nullptr);
+    if (ret)
+        return ECCS_SUCCESS;
+    else
+        return ECCS_ERR_DEV_SEND_FAILED;
+}
+
 // ---------- 播放 ----------
 
 ECCS_Error Sound_NetSpeaker_V2::PlayIndex(int index, bool loop)
@@ -629,6 +638,31 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
 
         auto rpPkt = std::make_shared<rpc::RpQueryAudioList>(*rpList);
         if (m_statusCb) m_statusCb(rpPkt);
+    }
+
+    else if (cmd == "post_status") {
+        str model;
+        if (ExtractStr(json, "model", model)) {
+            // 映射模式字符串到枚举
+            if (model == "idle")
+                m_soundMode = SoundStatus::Idle;
+            else if (model == "player")
+                m_soundMode = SoundStatus::Player;
+            else if (model == "OneKey")
+                m_soundMode = SoundStatus::OneKey;
+            else if (model == "MicBroadcast")
+                m_soundMode = SoundStatus::MicBroadcast;
+        }
+
+        // 关键：构造 Rp 包并唤醒可能正在同步等待的 API 线程
+        SoundStatus ss;
+        ss = m_soundMode;
+
+        auto rp = std::make_shared<rpc::RpQuerySoundStatus>(ss);
+        if (m_statusCb) m_statusCb(rp);
+
+        // 同时也推送一个通用的状态变更事件给上位机
+        SetState(m_soundMode == SoundStatus::Idle ? STATE_ONLINE : STATE_WORKING);
     }
 
     // ---------- 上传 MP3 / 报警音频 ACK ----------

@@ -28,6 +28,8 @@ enum ECCS_Error {
 
     ECCS_ERR_DEV_LIGHT_CLOSE = 120, // 灯光未开启（需开启灯光后再开启频闪）
 
+    ECCS_ERR_INDEX_NOT_FOUND = 140, // 音频索引不存在
+
     // === 配置与文件 (200 - 299) ===
     ECCS_ERR_CFG_LOAD_FAILED = 200, // 配置文件加载失败 (路径错误或格式错误)
     ECCS_ERR_CFG_WRITE_FAILED = 201, // 配置文件写入失败
@@ -57,7 +59,7 @@ enum ECCS_EventType {
     ECCS_EVT_GENERAL = 0,
     ECCS_EVT_STATUS_CHANGE = 1, // 状态变更 (Payload: DeviceStatus结构体)
     ECCS_EVT_PTZ_ANGLE = 2, // 云台角度 (Payload: PtzPosition结构体)
-    ECCS_EVT_SOUND_FINISH = 3  // 播放结束 (无 Payload)
+    ECCS_EVT_SOUND_MODE_CHANGE = 3  // 播放状态变更
 };
 
 // -----------------------------------------------------------
