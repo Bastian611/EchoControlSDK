@@ -115,9 +115,10 @@ private:
     // =================================================
     // 协议状态
     // =================================================
-    std::atomic<int>    m_cseq{ 0 };
-    std::atomic<SoundStatus> m_soundMode{ SoundStatus::Idle };
-    std::atomic<bool>  m_loopPlay{ false };
+    std::atomic<int>            m_cseq{ 0 };
+    std::atomic<SoundStatus>    m_soundMode{ SoundStatus::Idle };
+    SoundStatusData             m_lastPushedSoundData; // 记录上次推送的快照
+    std::atomic<bool>           m_loopPlay{ false };
 
     // =================================================
     // 音频缓存（SDK → 设备）
@@ -161,6 +162,7 @@ private:
     std::atomic<int> m_waitingCseq{ -1 }; // 正在等待回复的序列号
     bool m_lastAckResult{ false };   // 暂存回复结果
     std::recursive_mutex m_cmdMtx;
+    int m_lastPlayIdx{ -1 };
 };
 
 ECCS_END

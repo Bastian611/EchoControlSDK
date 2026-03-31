@@ -206,42 +206,40 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_OneKey_Start(ECCS_HANDLE hDev) {
         CHECK_INIT_AND_GET_MGR();
 
-        // 获取当前存储的一键拒止参数
-        ECCS_OneKeyParams p = mgr->GetOneKeyParams();
+        // 提取当前所有参数
+        ECCS_OneKeyParams p;
+        ECCS_OneKey_GetParams(hDev, &p);
 
-        // 1. 校验强声列表 (假设已经通过 QueryAudioList 缓存)
-        if (!mgr->ValidateSoundIndex(p.soundTrackIndex)) {
-            LOG_ERROR("OneKey Start Failed: Sound Index %d not found.", p.soundTrackIndex);
-            return ECCS_ERR_INVALID_PARAM;
-        }
+        // 开始宏执行序列
+        LOG_INFO("--- OneKey Deterrence Start Sequence ---");
 
-        // 2. 执行序列化宏动作 (带 50ms 间隔保护电源)
-        // A. 设置云台：速度 -> 范围 -> 启动
-        ECCS_PTZ_SetScanSpeed(hDev, p.ptzScanSpeed);
+        // 强声预设 (设置音量，但不播放)
+        ECCS_Sound_SetPlayVolume(hDev, p.soundVolume);
         msleep(50);
+
+        // 云台线扫开启
         ECCS_PTZ_SetScanRange(hDev, p.ptzScanStart, p.ptzScanEnd);
         msleep(50);
         ECCS_PTZ_StartScan(hDev);
         msleep(50);
 
-        // B. 设置强光：模式(白/绿) -> 开启 -> 频闪
+        // 强光开启
         ECCS_Light_SetLevel(hDev, p.lightLevel);
         msleep(50);
-        ECCS_Light_SetSwitch(hDev, 1);
+        ECCS_Light_SetMode(hDev, p.lightMode);
         msleep(50);
-        ECCS_Light_SetStrobe(hDev, p.lightStrobe);
+        ECCS_Light_SetSwitch(hDev, true);
+        msleep(50);
+        ECCS_Light_SetStrobe(hDev, p.lightStrobe == 1);
         msleep(50);
 
-        // C. 开启强声：音量 -> 播放
-        ECCS_Sound_SetPlayVolume(hDev, p.soundVolume);
-        msleep(50);
-        ECCS_Sound_Play(hDev, p.soundTrackIndex, p.soundLoop);
+        // 强声播放 (最后开启声音，此时光和电已经就位)
+        ECCS_Sound_Play(hDev, p.soundTrackIndex, p.soundLoop == 1);
 
-        LOG_INFO(">>> One-Key Deterrence ACTIVATED <<<");
+        LOG_INFO("--- OneKey Deterrence Fully Activated ---");
         return ECCS_SUCCESS;
     }
 
-    // 内部一键拒止停止逻辑 (软急停)
     ECCS_API ECCS_Error ECCS_OneKey_Stop(ECCS_HANDLE hDev) {
         // 停止不设间隔，追求响应速度
         ECCS_Sound_Stop(hDev);
@@ -253,6 +251,67 @@ extern "C" {
         return ECCS_SUCCESS;
     }
 
+    ECCS_API ECCS_Error ECCS_OneKey_GetParams(ECCS_HANDLE hDev, ECCS_OneKeyParams* params) 
+    {
+        CHECK_INIT_AND_GET_MGR();
+        if (!params) 
+            return ECCS_ERR_INVALID_PARAM;
+
+        // 获取强声参数
+        DeviceBase* sDev = mgr->GetBestDevice(did::DEVICE_SOUND);
+        if (sDev) {
+            params->soundVolume = (u8)sDev->GetPropValue<int>("OneKey_Vol");
+            params->soundTrackIndex = sDev->GetPropValue<int>("OneKey_Idx");
+            params->soundLoop = (u8)sDev->GetPropValue<int>("OneKey_Loop");
+        }
+
+        // 获取强光参数
+        DeviceBase* lDev = mgr->GetBestDevice(did::DEVICE_LIGHT);
+        if (lDev) {
+            params->lightMode = (u8)lDev->GetPropValue<int>("OneKey_Mode");
+            params->lightLevel = (u8)lDev->GetPropValue<int>("OneKey_Level");
+            params->lightStrobe = (u8)lDev->GetPropValue<int>("OneKey_Strobe");
+        }
+
+        // 获取云台参数
+        DeviceBase* pDev = mgr->GetBestDevice(did::DEVICE_PTZ);
+        if (pDev) {
+            params->ptzScanStart = pDev->GetPropValue<float>("OneKey_ScanStart");
+            params->ptzScanEnd = pDev->GetPropValue<float>("OneKey_ScanEnd");
+        }
+
+        return ECCS_SUCCESS;
+    }
+
+    ECCS_API ECCS_Error ECCS_OneKey_SetParams(ECCS_HANDLE hDev, const ECCS_OneKeyParams* params) 
+    {
+        CHECK_INIT_AND_GET_MGR();
+        if (!params) return ECCS_ERR_INVALID_PARAM;
+
+        DeviceBase* sDev = mgr->GetBestDevice(did::DEVICE_SOUND);
+        if (sDev) {
+            int sid = sDev->GetSlotID();
+            mgr->UpdateConfig(sid, "OneKey_Vol", std::to_string(params->soundVolume));
+            mgr->UpdateConfig(sid, "OneKey_Idx", std::to_string(params->soundTrackIndex));
+            mgr->UpdateConfig(sid, "OneKey_Loop", std::to_string(params->soundLoop));
+        }
+
+        DeviceBase* lDev = mgr->GetBestDevice(did::DEVICE_LIGHT);
+        if (lDev) {
+            int sid = lDev->GetSlotID();
+            mgr->UpdateConfig(sid, "OneKey_Mode", std::to_string(params->lightMode));
+            mgr->UpdateConfig(sid, "OneKey_Level", std::to_string(params->lightLevel));
+            mgr->UpdateConfig(sid, "OneKey_Strobe", std::to_string(params->lightStrobe));
+        }
+
+        DeviceBase* pDev = mgr->GetBestDevice(did::DEVICE_PTZ);
+        if (pDev) {
+            int sid = pDev->GetSlotID();
+            mgr->UpdateConfig(sid, "OneKey_ScanStart", std::to_string(params->ptzScanStart));
+            mgr->UpdateConfig(sid, "OneKey_ScanEnd", std::to_string(params->ptzScanEnd));
+        }
+        return ECCS_SUCCESS;
+    }
 
     // --- Light ---
     ECCS_API ECCS_Error ECCS_Light_SetSwitch(ECCS_HANDLE hDev, int isOpen)

@@ -7,6 +7,7 @@ ECCS_BEGIN
 
 Sound_NetSpeaker_V2::Sound_NetSpeaker_V2()
 {
+    m_lastPushedSoundData = { 0, 0, 0 };
 }
 
 Sound_NetSpeaker_V2::~Sound_NetSpeaker_V2()
@@ -130,7 +131,10 @@ ECCS_Error Sound_NetSpeaker_V2::PlayIndex(int index, bool loop)
         "\"index\":\"%d\",\"loop\":\"%d\"",
         index, loop ? 1 : 0);
 
-    SendJsonCmd("start_play", param, 5000);
+    bool ret = SendJsonCmd("start_play", param, 5000);
+    if (ret) {
+        m_lastPlayIdx = index;
+    }
     SetState(STATE_WORKING);
     return ECCS_SUCCESS;
 }
@@ -580,19 +584,6 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
         SetState(STATE_ERROR, 400);
     }
 
-    // ---------- 状态 ----------
-    if (cmd == "post_status")
-    {
-        str model;
-        if (ExtractStr(json, "model", model))
-        {
-            if (model == "idle")         m_soundMode = SoundStatus::Idle;
-            else if (model == "player")  m_soundMode = SoundStatus::Player;
-            else if (model == "one_key") m_soundMode = SoundStatus::OneKey;
-            else if (model == "mic_broadcast") m_soundMode = SoundStatus::MicBroadcast;
-        }
-    }
-
     // ---------- 音量 ----------
     else if (cmd == "post_vol")
     {
@@ -647,12 +638,15 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
         if (m_statusCb) m_statusCb(rpPkt);
     }
 
+    // ---------- 状态 ----------
     else if (cmd == "post_status") {
         str model;
         if (ExtractStr(json, "model", model)) {
             // 映射模式字符串到枚举
-            if (model == "idle")
+            if (model == "idle") {
                 m_soundMode = SoundStatus::Idle;
+                m_lastPlayIdx = -1;
+            }
             else if (model == "player")
                 m_soundMode = SoundStatus::Player;
             else if (model == "OneKey")
@@ -663,18 +657,20 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
 
         // 关键：构造 Rp 包并唤醒可能正在同步等待的 API 线程
         SoundStatusData ss;
-        ss.mode = m_soundMode;
+        ss.mode = (u8)m_soundMode.load();
         ss.capVol = m_captureVolume;
         ss.playVol = m_playVolume;
+        ss.curIndex = m_lastPlayIdx;
 
-        auto pkt = std::make_shared<rpc::OwSoundStatus>(ss);
-        if (m_statusCb) m_statusCb(pkt);
+        if (memcmp(&ss, &m_lastPushedSoundData, sizeof(SoundStatusData)) != 0) {
+            auto pkt = std::make_shared<rpc::OwSoundStatus>(ss);
+            if (m_statusCb) m_statusCb(pkt);
 
-        //auto rp = std::make_shared<rpc::RpQuerySoundStatus>(ss);
-        //if (m_statusCb) m_statusCb(rp);
+            m_lastPushedSoundData = ss; // 更新快照
 
-        // 同时也推送一个通用的状态变更事件给上位机
-        SetState(m_soundMode == SoundStatus::Idle ? STATE_ONLINE : STATE_WORKING);
+            // 同时根据模式同步基类状态
+            SetState(ss.mode == SoundStatus::Idle ? STATE_ONLINE : STATE_WORKING);
+        }
     }
 
     // ---------- 上传 MP3 / 报警音频 ACK ----------
@@ -689,14 +685,35 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
 
 void Sound_NetSpeaker_V2::HeartbeatLoop()
 {
+    LOG_INFO("[Slot %d] Sound: Heartbeat and Polling thread started.", m_slotID);
+
+    int heartbeatCounter = 0; // 心跳计数器（秒）
+    int queryCounter = 0;     // 巡检计数器（秒）
+
     while (m_keepHeartbeat)
     {
-        msleep(30000);
+        msleep(1000);
 
         if (IsOnline())
+            continue;
+
+        heartbeatCounter++;
+        queryCounter++;
+
+        if (heartbeatCounter >= 30)
         {
+            LOG_DEBUG("[NetSpeaker] Sending mandatory heartbeat (online)...");
             SendJsonCmd("online", nullptr);
+            heartbeatCounter = 0; // 重置心跳计数
         }
+
+        if (GetState() == STATE_WORKING && queryCounter >= 5)
+        {
+            LOG_DEBUG("[NetSpeaker] Device is WORKING, polling status...");
+            SendJsonCmd("get_status", nullptr);
+            queryCounter = 0; // 重置巡检计数
+        }
+
     }
 }
 

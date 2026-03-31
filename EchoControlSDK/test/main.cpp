@@ -30,9 +30,6 @@ void SystemCallback(ECCS_HANDLE hDev, ECCS_EventType type, const void* data, int
         fflush(stdout);
         break;
     }
-    case ECCS_EVT_SOUND_FINISH:
-        printf("\n[Callback] Sound Playback Finished.\n> ");
-        break;
     default:
         break;
     }

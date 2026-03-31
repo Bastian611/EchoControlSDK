@@ -5,6 +5,7 @@
 #include "../protocol/RpcPacket.h"
 #include "../include/EchoControlCode.h"
 #include "../device/DeviceID.h"
+#include "../device/DeviceDataTypes.h"
 #include <map>
 #include <vector>
 
@@ -68,6 +69,9 @@ private:
 
     mutable std::mutex m_devMutex;        // 保护 m_devices 的访问
     std::atomic<bool>  m_initialized;    // SDK 全局初始化状态
+
+    OneKeyParams m_oneKeyCache;
+    mutable std::mutex m_configMutex; // 保护配置文件写操作
 };
 
 ECCS_END

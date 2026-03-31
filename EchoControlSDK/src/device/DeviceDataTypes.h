@@ -20,6 +20,7 @@ struct SoundStatusData
     u8 mode;
     u8 capVol;
     u8 playVol;
+    u16 curIndex;
 };
 
 // =======================
@@ -223,6 +224,28 @@ struct VideoParams {
     u8  framerate;
     u32 bitrate;         // Kbps
     u8  encodeFormat;    // 0:H264, 1:H265
+};
+
+struct OneKeyParams {
+    // =================================================
+    // 强声参数
+    // =================================================
+    unsigned char soundVolume;      // 播放音量: 0-100
+    int           soundTrackIndex;  // 预设音频索引 (需提前刷新列表确认索引存在)
+    unsigned char soundLoop;        // 循环模式: 1=循环播放, 0=单次播放
+
+    // =================================================
+    // 强光参数
+    // =================================================
+    unsigned char lightMode;        // 工作模式: 1:不出光, 2:炫目/绿, 3:照明/白（部分型号不支持）
+    unsigned char lightLevel;       // 功率/亮度档位: 1-10（部分型号不支持）
+    unsigned char lightStrobe;      // 频闪控制: 1=开启, 0=关闭
+
+    // =================================================
+    // 云台参数
+    // =================================================
+    float         ptzScanStart;     // 水平线扫起始角度: 0.00°- 359.99°
+    float         ptzScanEnd;       // 水平线扫终止角度: 0.00°- 359.99°
 };
 
 #pragma pack(pop)

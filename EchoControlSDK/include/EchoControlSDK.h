@@ -54,6 +54,20 @@ extern "C" {
         float zoom;
     } ECCS_PtzPosition;
 
+    /**
+     * @brief 强声模块状态
+     * @param mode，播放模式，0：空闲，1：播放器模式，2：一键驱鸟音播放模式，3：远程喊话模式
+     * @param capVol，设备采集音量
+     * @param playVol，设备播放音量
+     * @param curIndex，当前播放的文件索引，-1代表未进行播放或未查询到
+     */
+    typedef struct {
+        uint8_t     mode;
+        uint8_t     capVol;
+        uint8_t     playVol;
+        uint16_t    curIndex;
+    } ECCS_SoundStatusData;
+
     /** 
      * @brief 音频文件简要信息
      * @param index，文件索引号
@@ -80,32 +94,24 @@ extern "C" {
      */
     typedef struct {
         // =================================================
-        // 强声 (Sound) 参数
+        // 强声参数
         // =================================================
         unsigned char soundVolume;      // 播放音量: 0-100
         int           soundTrackIndex;  // 预设音频索引 (需提前刷新列表确认索引存在)
         unsigned char soundLoop;        // 循环模式: 1=循环播放, 0=单次播放
 
         // =================================================
-        // 强光 (Light) 参数
+        // 强光参数
         // =================================================
-        unsigned char lightMode;        // 工作模式: 1:不出光, 2:炫目/绿, 3:照明/白
+        unsigned char lightMode;        // 工作模式: 1:不出光, 2:炫目/绿, 3:照明/白（部分型号不支持）
         unsigned char lightLevel;       // 功率/亮度档位: 1-10（部分型号不支持）
         unsigned char lightStrobe;      // 频闪控制: 1=开启, 0=关闭
 
         // =================================================
-        // 云台 (PTZ) 参数
+        // 云台参数
         // =================================================
         float         ptzScanStart;     // 水平线扫起始角度: 0.00°- 359.99°
         float         ptzScanEnd;       // 水平线扫终止角度: 0.00°- 359.99°
-        float         ptzTiltAngle;     // 线扫时的固定俯仰角: -90.00° - 90.00° (确保指向目标区域)
-        unsigned char ptzScanSpeed;     // 线扫运动速度: 1 - 64
-
-        // =================================================
-        // 策略 (Global) 参数
-        // =================================================
-        unsigned int  actionDuration;   // 动作持续时间: 单位秒。0表示不限时(手动停止)，>0则倒计时自动关闭
-        unsigned char reserved[7];      // 预留位
     } ECCS_OneKeyParams;
 
 #pragma pack(pop)
@@ -199,9 +205,9 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_OneKey_SetParams(ECCS_HANDLE hDev, const ECCS_OneKeyParams* params);
     /**
      * @brief 读取一键拒止参数
-     * @param outParams，一键拒止参数
+     * @param params，一键拒止参数
      */
-    ECCS_API ECCS_Error ECCS_OneKey_GetParams(ECCS_HANDLE hDev, ECCS_OneKeyParams* outParams);
+    ECCS_API ECCS_Error ECCS_OneKey_GetParams(ECCS_HANDLE hDev, ECCS_OneKeyParams* params);
 
     // =======================================================
     // 强光控制

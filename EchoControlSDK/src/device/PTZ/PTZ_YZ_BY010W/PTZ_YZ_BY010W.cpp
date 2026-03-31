@@ -223,40 +223,49 @@ void PTZ_YZ_BY010W::OnRawDataReceived(const u8* data, u32 len)
 
 void PTZ_YZ_BY010W::OnStateEnter(DevState state)
 {
-    if (state == STATE_ONLINE) {
-        // 从配置读取业务零位
-        float zeroPan = GetPropValue<float>("Zero_Pan");
-        float zeroTilt = GetPropValue<float>("Zero_Tilt");
 
-        LOG_INFO("[Slot %d] PTZ: Moving to Configured Zero (%.2f, %.2f) at MAX speed",
-            m_slotID, zeroPan, zeroTilt);
-        if (m_lastPan != 0 || m_lastTilt != 0)
-            SetState(STATE_WORKING);
-    }
 }
 
 void PTZ_YZ_BY010W::ParseResponse(const u8* data) {
     u8 type = data[3];
     u16 val = (data[4] << 8) | data[5];
     float angle = val / 100.0f;
+    float newPan = m_lastPan.load();
+    float newTilt = m_lastTilt.load();
 
     if (type == 0x59) {
-        m_lastPan = angle;       // 水平回传
+        newPan = angle;  
     }
-    else if (type == 0x5B) {                   // 垂直回传
+    else if (type == 0x5B) {                   
         if (angle > 180.0f) 
         {
             angle -= 360.0f;
         }   
-        m_lastTilt = angle;
+        newTilt = angle;
     }
     else {
         return;
     }
 
-    PtzPosition pos = { m_lastPan.load(), m_lastTilt.load(), 0 };
-    auto pkt = std::make_shared<rpc::OwPtzPosition>(pos);
-    if (m_statusCb) m_statusCb(pkt);
+    float diff = std::abs(newPan - m_lastPan.load()) + std::abs(newTilt - m_lastTilt.load());
+    if (diff > 0.05f) {
+        // 角度在变 -> 说明电机在转 -> 状态设为 WORKING
+        SetState(STATE_WORKING);
+    }
+    else {
+        // 角度没变 -> 说明电机停了 -> 状态设为 ONLINE (空闲就绪)
+        SetState(STATE_ONLINE);
+    }
+
+    // 只有当角度变化超过 0.1 度时，才发 OwPtzPosition 包
+    if (diff > 0.1f) {
+        m_lastPan = newPan;
+        m_lastTilt = newTilt;
+
+        PtzPosition pos = { newPan, newTilt, 0 };
+        auto pkt = std::make_shared<rpc::OwPtzPosition>(pos);
+        if (m_statusCb) m_statusCb(pkt);
+    }
 }
 
 ECCS_END
