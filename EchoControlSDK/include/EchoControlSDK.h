@@ -265,12 +265,6 @@ extern "C" {
      */
     ECCS_API ECCS_Error ECCS_PTZ_SetScanRange(ECCS_HANDLE hDev, float start, float end);
 
-    /**
-     * @brief 设置线扫速度
-     * @param speed，线扫速度:
-     */
-    ECCS_API ECCS_Error ECCS_PTZ_SetScanSpeed(ECCS_HANDLE hDev, int speed);
-
     /** 
      * @brief 开启自动线扫 
      */

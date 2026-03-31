@@ -308,11 +308,6 @@ extern "C" {
         return PostPkt<rpc::RqSetPtzScanRange, rpc::RpSetPtzScanRange>(hDev, did::DEVICE_PTZ, data, &result);
     }
 
-    ECCS_API ECCS_Error ECCS_PTZ_SetScanSpeed(ECCS_HANDLE hDev, int speed)
-    {
-
-    }
-
     ECCS_API ECCS_Error ECCS_PTZ_StartScan(ECCS_HANDLE hDev) 
     {
         Result result;

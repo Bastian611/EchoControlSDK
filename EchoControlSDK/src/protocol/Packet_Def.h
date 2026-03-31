@@ -109,8 +109,8 @@ namespace rpc {
     typedef Packet<_APP_RQ_QUERY_ID_(DEVICE_SOUND, 3), NoneData>    RqQueryPlayVolume;
     typedef Packet<_APP_RP_QUERY_ID_(DEVICE_SOUND, 3), SoundVolume> RpQueryPlayVolume;
 
-    typedef Packet<_APP_RQ_QUERY_ID_(DEVICE_SOUND, 4), NoneData>    RqQuerySoundStatus;
-    typedef Packet<_APP_RP_QUERY_ID_(DEVICE_SOUND, 4), SoundStatus> RpQuerySoundStatus;
+    typedef Packet<_APP_RQ_QUERY_ID_(DEVICE_SOUND, 4), NoneData>        RqQuerySoundStatus;
+    typedef Packet<_APP_RP_QUERY_ID_(DEVICE_SOUND, 4), SoundStatusData> RpQuerySoundStatus;
 
     // #############################################################
     // SETTING (参数配置)
@@ -157,7 +157,7 @@ namespace rpc {
     typedef Packet<_APP_OW_ID_(DEVICE_PTZ, 1), PtzPosition> OwPtzPosition;
 
     // 强声播放结束/切换通知
-    typedef Packet<_APP_OW_ID_(DEVICE_SOUND, 1), SoundStatus> OwSoundStatus;
+    typedef Packet<_APP_OW_ID_(DEVICE_SOUND, 1), SoundStatusData> OwSoundStatus;
 
     // 强光实时参数反馈 (RGB_V3 状态回传)
     typedef Packet<_APP_OW_ID_(DEVICE_LIGHT, 1), LightRTParam>   OwLightStatus;

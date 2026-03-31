@@ -230,17 +230,8 @@ void PTZ_YZ_BY010W::OnStateEnter(DevState state)
 
         LOG_INFO("[Slot %d] PTZ: Moving to Configured Zero (%.2f, %.2f) at MAX speed",
             m_slotID, zeroPan, zeroTilt);
-
-        // 1. 设置最高速度 (Pelco-D 标准通常 0x3F 为最大)
-        SendPelcoD(0x00, 0x31, 0x3F, 0x3F);
-
-        // 2. 发起绝对定位
-        PtzSetAbsolutePos(zeroPan, zeroTilt);
-
-        // 3. 标记为工作中，防止初始化过程中用户误操作
-        SetState(STATE_WORKING);
-
-        // 4. 开启异步检测，到达角度后自动切回 ONLINE (逻辑预留)
+        if (m_lastPan != 0 || m_lastTilt != 0)
+            SetState(STATE_WORKING);
     }
 }
 

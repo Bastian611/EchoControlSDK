@@ -23,7 +23,7 @@ public:
         return SoundStatus::Idle;
     }
 
-    virtual ECCS_Error QuerySoundStatus(SoundStatus ss)
+    virtual ECCS_Error QuerySoundStatus(SoundStatusData ss)
     {
         return ECCS_SUCCESS;
     }
@@ -138,7 +138,7 @@ public:
     // =================================================
     // »Øµ÷£º²¥·Å×´Ì¬
     // =================================================
-    using SoundStatusCallback = std::function<void(SoundStatus)>;
+    using SoundStatusCallback = std::function<void(SoundStatusData)>;
 
     void SetSoundStatusCallback(SoundStatusCallback cb)
     {
@@ -155,7 +155,7 @@ protected:
             m_audioCb(data, len);
     }
 
-    void NotifyPlayState(SoundStatus state)
+    void NotifyPlayState(SoundStatusData state)
     {
         if (m_soundStatusCb)
             m_soundStatusCb(state);

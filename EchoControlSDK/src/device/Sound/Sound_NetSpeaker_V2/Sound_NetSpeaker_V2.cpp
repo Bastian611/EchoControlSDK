@@ -106,7 +106,7 @@ SoundStatus Sound_NetSpeaker_V2::GetSoundMode() const
     return m_soundMode.load();
 }
 
-ECCS_Error Sound_NetSpeaker_V2::QuerySoundStatus(SoundStatus ss)
+ECCS_Error Sound_NetSpeaker_V2::QuerySoundStatus(SoundStatusData ss)
 {
     bool ret = SendJsonCmd("get_status", nullptr);
     if (ret)
@@ -313,6 +313,13 @@ void Sound_NetSpeaker_V2::OnStateEnter(DevState state)
         m_keepAudioRx = true;
         if (!m_audioRxThread)
             m_audioRxThread = new std::thread(&Sound_NetSpeaker_V2::AudioRxLoop, this);
+
+        std::thread([this]() {
+            msleep(800); // 等待网络就绪
+            this->SendJsonCmd("get_vol", nullptr);
+            msleep(100);
+            this->SendJsonCmd("get_status", nullptr); // 触发硬件返回 post_status
+            }).detach();
     }
 }
 
@@ -655,11 +662,16 @@ void Sound_NetSpeaker_V2::HandleJsonReply(const str& json)
         }
 
         // 关键：构造 Rp 包并唤醒可能正在同步等待的 API 线程
-        SoundStatus ss;
-        ss = m_soundMode;
+        SoundStatusData ss;
+        ss.mode = m_soundMode;
+        ss.capVol = m_captureVolume;
+        ss.playVol = m_playVolume;
 
-        auto rp = std::make_shared<rpc::RpQuerySoundStatus>(ss);
-        if (m_statusCb) m_statusCb(rp);
+        auto pkt = std::make_shared<rpc::OwSoundStatus>(ss);
+        if (m_statusCb) m_statusCb(pkt);
+
+        //auto rp = std::make_shared<rpc::RpQuerySoundStatus>(ss);
+        //if (m_statusCb) m_statusCb(rp);
 
         // 同时也推送一个通用的状态变更事件给上位机
         SetState(m_soundMode == SoundStatus::Idle ? STATE_ONLINE : STATE_WORKING);

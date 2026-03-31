@@ -15,6 +15,13 @@ enum SoundStatus
     MicBroadcast    // 实时喊话
 };
 
+struct SoundStatusData
+{
+    u8 mode;
+    u8 capVol;
+    u8 playVol;
+};
+
 // =======================
 // 播放状态事件
 // =======================

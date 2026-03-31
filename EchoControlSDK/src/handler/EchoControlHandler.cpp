@@ -197,7 +197,7 @@ EchoControlHandler::EchoControlHandler() {
     Register<rpc::RqQuerySoundStatus>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
         CAST_DEV(ISound_Device, sound);
         CAST_PKT(rpc::RqQuerySoundStatus, req);
-        SoundStatus ss;
+        SoundStatusData ss;
         sound->QuerySoundStatus(ss);
         });
 

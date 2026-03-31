@@ -25,7 +25,13 @@ ECCS_Error Light_Green_Small::Init(int slotID, const std::map<str, str>& config)
 ECCS_Error Light_Green_Small::Start() 
 {
     DeviceBase::Start();
-    return Connect() ? ECCS_SUCCESS : ECCS_ERR_DEV_OFFLINE;
+    bool ret = Connect();
+    if (ret) {
+        SetStrobe(false);
+        msleep(200);
+        SetLightSwitch(false);
+    }
+    return ret ? ECCS_SUCCESS : ECCS_ERR_DEV_OFFLINE;
 }
 
 ECCS_Error Light_Green_Small::Stop() 
