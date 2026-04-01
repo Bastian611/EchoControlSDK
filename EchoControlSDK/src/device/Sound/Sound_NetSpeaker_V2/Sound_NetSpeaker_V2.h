@@ -38,6 +38,7 @@ public:
     virtual bool SetSoundMode(SoundStatus mode) override;
     virtual SoundStatus GetSoundMode() const override;
     virtual ECCS_Error QuerySoundStatus(SoundStatusData ss) override;
+    virtual ECCS_Error CheckAudioIndex(int index) override;
 
     // --- ²¥·Å¿ØÖÆ ---
     virtual ECCS_Error PlayIndex(int index, bool loop = false) override;

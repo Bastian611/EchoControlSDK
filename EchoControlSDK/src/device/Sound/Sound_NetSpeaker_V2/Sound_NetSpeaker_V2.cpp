@@ -116,6 +116,16 @@ ECCS_Error Sound_NetSpeaker_V2::QuerySoundStatus(SoundStatusData ss)
         return ECCS_ERR_DEV_SEND_FAILED;
 }
 
+ECCS_Error Sound_NetSpeaker_V2::CheckAudioIndex(int index)
+{
+    SoundAudioList list;
+    GetAudioList(list);
+    for (const auto& file : m_audioList) {
+        if (file.index == index) return ECCS_SUCCESS;
+    }
+    return ECCS_ERR_INDEX_NOT_FOUND;
+}
+
 // ---------- 播放 ----------
 
 ECCS_Error Sound_NetSpeaker_V2::PlayIndex(int index, bool loop)

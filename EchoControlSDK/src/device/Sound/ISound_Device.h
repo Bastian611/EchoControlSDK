@@ -28,6 +28,11 @@ public:
         return ECCS_SUCCESS;
     }
 
+    virtual ECCS_Error CheckAudioIndex(int index)
+    {
+        return ECCS_ERR_NOT_SUPPORTED;
+    }
+
     // =================================================
     // ²¥·Å¿ØÖÆ
     // =================================================

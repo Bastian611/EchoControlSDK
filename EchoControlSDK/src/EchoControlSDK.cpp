@@ -203,15 +203,26 @@ extern "C" {
     }
 
     // 系统级控制
-    ECCS_API ECCS_Error ECCS_OneKey_Start(ECCS_HANDLE hDev) {
+    ECCS_API ECCS_Error ECCS_OneKey_Start(ECCS_HANDLE hDev) 
+    {
         CHECK_INIT_AND_GET_MGR();
 
         // 提取当前所有参数
         ECCS_OneKeyParams p;
         ECCS_OneKey_GetParams(hDev, &p);
 
+        auto sound = dynamic_cast<ISound_Device*>(mgr->GetBestDevice(did::DEVICE_SOUND));
+        if (!sound) 
+            return ECCS_ERR_DEV_NOT_FOUND;
+
         // 开始宏执行序列
         LOG_INFO("--- OneKey Deterrence Start Sequence ---");
+
+        ECCS_Error err = sound->CheckAudioIndex(p.soundTrackIndex);
+        if (err != ECCS_SUCCESS) {
+            LOG_ERROR("OneKey Start aborted: Audio index %d not found.", p.soundTrackIndex);
+            return err; 
+        }
 
         // 强声预设 (设置音量，但不播放)
         ECCS_Sound_SetPlayVolume(hDev, p.soundVolume);
@@ -240,7 +251,9 @@ extern "C" {
         return ECCS_SUCCESS;
     }
 
-    ECCS_API ECCS_Error ECCS_OneKey_Stop(ECCS_HANDLE hDev) {
+    ECCS_API ECCS_Error ECCS_OneKey_Stop(ECCS_HANDLE hDev) 
+    {
+        CHECK_INIT_AND_GET_MGR();
         // 停止不设间隔，追求响应速度
         ECCS_Sound_Stop(hDev);
         ECCS_Light_SetStrobe(hDev, 0);
