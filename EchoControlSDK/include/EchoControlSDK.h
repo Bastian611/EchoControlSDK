@@ -348,6 +348,13 @@ extern "C" {
      */
     ECCS_API ECCS_Error ECCS_Sound_SetMic(ECCS_HANDLE hDev, int isOpen);
 
+    /**
+     * @brief 开启/关闭对讲模式 (全双工)
+     * @param isOpen 1=开启双向对讲, 0=关闭
+     * @note 开启后，SDK 会同时触发音频回传回调
+     */
+    ECCS_API ECCS_Error ECCS_Sound_SetTalk(ECCS_HANDLE hDev, int isOpen);
+
     /** 
      * @brief 上传本地音频文件到设备存储 
      * @param localPath，本地音频文件名称，目前只支持mp3/pcm格式文件

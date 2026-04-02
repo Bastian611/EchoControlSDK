@@ -117,6 +117,25 @@ int TcpSocket::localPort() const
 {
     return _localPortBind;
 }
+
+str TcpSocket::getLocalAddress() const
+{
+    if (_sock == HD_INVALID_SOCKET) 
+        return "";
+
+    socklen_t len;
+    sockaddr* addr = cachedLocalAddress(&len);
+    if (addr) {
+        str fullAddr = StrSockAddr(*addr);
+        size_t pos = fullAddr.find_last_of(':');
+        if (pos != str::npos) {
+            return fullAddr.substr(0, pos);
+        }
+        return fullAddr;
+    }
+    return "";
+}
+
 void TcpSocket::setLocalAddr(str host, int port)
 {
     if (isOpen()) {

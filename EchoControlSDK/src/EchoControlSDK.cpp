@@ -469,6 +469,12 @@ extern "C" {
         return PostPkt<rpc::RqSoundMicSwitch, rpc::RpSoundMicSwitch>(hDev, did::DEVICE_SOUND, (bool)(isOpen != 0), &result);
     }
 
+    ECCS_API ECCS_Error ECCS_Sound_SetTalk(ECCS_HANDLE hDev, int isOpen) {
+        Result result;
+        return PostPkt<rpc::RqSoundSetTalk, rpc::RpSoundSetTalk>(
+            hDev, did::DEVICE_SOUND, (bool)(isOpen != 0), &result);
+    }
+
     ECCS_API ECCS_Error ECCS_Sound_PushData(ECCS_HANDLE hDev, const char* data, int len) 
     {
         CHECK_INIT_AND_GET_MGR();

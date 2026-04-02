@@ -42,6 +42,8 @@ namespace rpc {
     FACTORY_ID_APPEND(RpSoundMicSwitch, RpcPacket)
     FACTORY_ID_APPEND(RqSoundRTAudio, RpcPacket)
     FACTORY_ID_APPEND(RpSoundRTAudio, RpcPacket)
+    FACTORY_ID_APPEND(RqSoundSetTalk, RpcPacket)
+    FACTORY_ID_APPEND(RpSoundSetTalk, RpcPacket)
 
     // --- PTZ Control ---
     FACTORY_ID_APPEND(RqPtzMove, RpcPacket)

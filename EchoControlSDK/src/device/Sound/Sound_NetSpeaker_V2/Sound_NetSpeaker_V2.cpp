@@ -26,6 +26,8 @@ ECCS_Error Sound_NetSpeaker_V2::Init(int slotID, const std::map<str, str>& confi
 
     m_ip = GetPropValue<str>("IP");
     m_port = GetPropValue<int>("Port");
+    m_txTargetPort = GetPropValue<int>("Audio_Port");
+    m_rxLocalPort = GetPropValue<int>("Local_Audio_Port");
     if (m_port == 0) m_port = 9527;
 
     return ECCS_SUCCESS;
@@ -189,6 +191,52 @@ ECCS_Error Sound_NetSpeaker_V2::MicSwitch(bool isOpen)
 
     SetState(STATE_WORKING);
     return ECCS_SUCCESS;
+}
+
+ECCS_Error Sound_NetSpeaker_V2::SetTalk(bool isOpen) 
+{
+    if (!IsOnline()) 
+        return ECCS_ERR_DEV_OFFLINE;
+
+    if (isOpen) {
+        str localIP = m_ctrlSocket->getLocalAddress();
+        if (localIP.empty()) localIP = "0.0.0.0"; // 防御性处理
+
+        // 更新音频参数快照 (PCM 16K, 9888端口)
+        {
+            std::lock_guard<std::mutex> lock(m_specMutex);
+            m_txTargetPort = GetPropValue<int>("Audio_Port"); // 从配置读取 9888
+            m_currentSpec = { 640, 5 }; // PCM 16K 推荐帧大小
+        }
+
+        // 构造指令参数
+        char params[256];
+        snprintf(params, sizeof(params),
+            "\"caller_ip\":\"%s\",\"caller_port\":\"%d\",\"cap_vol\":\"%d\",\"play_vol\":\"%d\",\"sample_rate\":\"16000\"",
+            localIP.c_str(), 
+            m_rxLocalPort.load(),
+            m_captureVolume,
+            m_playVolume);
+
+        // 发送 open_mic_talk
+        if (SendJsonCmd("open_mic_talk", params)) {
+            m_keepAudioTx = true;
+            m_keepAudioRx = true;
+            m_soundMode = SoundStatus::MicBroadcast; // 逻辑上标记为通话中
+            SetState(STATE_WORKING);
+            return ECCS_SUCCESS;
+        }
+        return ECCS_ERR_DEV_SEND_FAILED;
+    }
+    else {
+        // 发送停止指令
+        SendJsonCmd("close_mic_talk", nullptr);
+        m_keepAudioTx = false;
+        m_keepAudioRx = false;
+        m_soundMode = SoundStatus::Idle;
+        SetState(STATE_ONLINE);
+        return ECCS_SUCCESS;
+    }
 }
 
 // ---------- 一键驱散 ----------
@@ -379,6 +427,12 @@ void Sound_NetSpeaker_V2::OnStateExit(DevState state)
         delete m_audioTxBuf;
         m_audioTxBuf = nullptr;
     }
+}
+
+void Sound_NetSpeaker_V2::OnRegisterProperties() 
+{
+    RegisterProp<int>("Audio_Port", 9888, "Remote UDP Audio Port");
+    RegisterProp<int>("Local_Audio_Port", 11200, "Local UDP Audio Listen Port");
 }
 
 // =================================================

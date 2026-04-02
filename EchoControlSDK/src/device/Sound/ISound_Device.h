@@ -66,6 +66,12 @@ public:
         return ECCS_ERR_NOT_SUPPORTED;
     }
 
+    virtual ECCS_Error SetTalk(bool isOpen)
+    {
+        LOG_WARNING("[Slot %d] Device does not support", m_slotID);
+        return ECCS_ERR_NOT_SUPPORTED;
+    }
+
     // =================================================
     // Ò»¼üÇýÉ¢
     // =================================================

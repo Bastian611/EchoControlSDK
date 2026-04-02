@@ -40,6 +40,7 @@ public:
 
     str localHost() const;
     int localPort() const;
+    str getLocalAddress() const;
     void setLocalAddr(str host, int port);
     void setCachedLocalAddress(const sockaddr* addr, socklen_t len);
     sockaddr* cachedLocalAddress(socklen_t* len) const;

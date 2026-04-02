@@ -163,6 +163,12 @@ EchoControlHandler::EchoControlHandler() {
         sound->PushAudio(req->data.data, req->data.len);
         });
 
+    Register<rpc::RqSoundSetTalk>([](DeviceBase* dev, std::shared_ptr<rpc::RpcPacket> pkt) {
+        CAST_DEV(ISound_Device, sound);
+        CAST_PKT(rpc::RqSoundSetTalk, req);
+        sound->SetTalk(req->data); 
+        });
+
 
     // =======================================================
     // ³¬ÉùÉè±¸ (Ultrasonic)

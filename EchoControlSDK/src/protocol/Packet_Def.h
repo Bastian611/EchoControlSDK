@@ -59,6 +59,9 @@ namespace rpc {
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 8), SoundAudioBuffer>  RqSoundRTAudio;
     typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 8), Result>            RpSoundRTAudio;
 
+    typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_SOUND, 9), bool>      RqSoundSetTalk;
+    typedef Packet<_APP_RP_CONTROL_ID_(DEVICE_SOUND, 9), Result>    RpSoundSetTalk;
+
     // --- PTZ Control ---
     // ÒÆ¶¯
     typedef Packet<_APP_RQ_CONTROL_ID_(DEVICE_PTZ, 1), PtzMotion> RqPtzMove;

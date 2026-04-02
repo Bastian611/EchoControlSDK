@@ -47,6 +47,7 @@ public:
     virtual ECCS_Error Prev() override;
 
     virtual ECCS_Error MicSwitch(bool isOpen) override;
+    virtual ECCS_Error SetTalk(bool isOpen) override;
 
     // --- 一键驱散 ---
     virtual ECCS_Error OneKeyPlay(int index) override;
@@ -73,6 +74,7 @@ protected:
     virtual void OnCustomEvent(Event_Ptr& e) override;
     virtual void OnStateEnter(DevState state) override;
     virtual void OnStateExit(DevState state) override;
+    virtual void OnRegisterProperties() override;
 
     // =================================================
     // 内部协议 & 连接管理
