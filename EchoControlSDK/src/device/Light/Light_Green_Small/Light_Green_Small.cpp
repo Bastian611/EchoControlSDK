@@ -106,4 +106,11 @@ int Light_Green_Small::ReadRaw(u8* buf, u32 maxLen)
     return m_socket->read(buf, maxLen);
 }
 
+void Light_Green_Small::OnRegisterProperties() 
+{
+    RegisterProp<int>("OneKey_Mode", 2, "Default Light Mode (2:Dazzle)");
+    RegisterProp<int>("OneKey_Level", 5, "Default Light Level");
+    RegisterProp<int>("OneKey_Strobe", 1, "Default Strobe Toggle");
+}
+
 ECCS_END

@@ -114,6 +114,14 @@ extern "C" {
         float         ptzScanEnd;       // 水平线扫终止角度: 0.00°- 359.99°
     } ECCS_OneKeyParams;
 
+    typedef struct {
+        uint8_t     deviceType;
+        uint8_t     deviceIndex;
+        uint8_t     state;           // Value from enum DevState
+        uint32_t    errorCode;      // 错误码
+        float       temperature;  // 温度
+    } ECCS_DeviceStatus;
+
 #pragma pack(pop)
 
     // =======================================================
@@ -340,7 +348,7 @@ extern "C" {
     /** 
      * @brief 获取设备内的音频列表 
      */
-    ECCS_API ECCS_Error ECCS_Sound_QueryAudioList(ECCS_HANDLE hDev, ECCS_SoundAudioList* ist);
+    ECCS_API ECCS_Error ECCS_Sound_QueryAudioList(ECCS_HANDLE hDev, ECCS_SoundAudioList* list);
 
     /** 
      * @brief 喊话模式开关 

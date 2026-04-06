@@ -64,6 +64,7 @@ ECCS_Error PTZ_YZ_BY010W::PtzMove(u8 action, u8 speed)
     case 4: c2 = 0x02; d1 = speed; break; // Right
     }
     ECCS_Error err = SendPelcoD(0x00, c2, d1, d2);
+    LOG_DEBUG("sendPelcoD: %d %d %d", action, speed, (int)err);
     if (err == ECCS_SUCCESS) {
         SetState(STATE_WORKING);
     }
@@ -124,10 +125,7 @@ ECCS_Error PTZ_YZ_BY010W::PtzSetScanRange(float startAngle, float endAngle)
 
     LOG_INFO("[Slot %d] PTZ: Set Scan START to %.2f deg", m_slotID, startAngle);
     ECCS_Error ret = SendPelcoD(0x01, 0x11, dataH, dataL);
-    if (ret != ECCS_SUCCESS) {
-        return ret;
-    }
-    else {
+    if (ret == ECCS_SUCCESS) {
         msleep(1000);
         val = (u16)(endAngle * 100);
         dataH = (u8)(val >> 8);
@@ -135,6 +133,10 @@ ECCS_Error PTZ_YZ_BY010W::PtzSetScanRange(float startAngle, float endAngle)
 
         LOG_INFO("[Slot %d] PTZ: Set Scan END to %.2f deg", m_slotID, endAngle);
         ret = SendPelcoD(0x01, 0x13, dataH, dataL);
+    }
+    else {
+        return ret;
+        LOG_INFO("set failed %s", ECCS_GetErrorStr(ret));
     }
     return ret;
 }
@@ -221,9 +223,11 @@ void PTZ_YZ_BY010W::OnRawDataReceived(const u8* data, u32 len)
     }
 }
 
-void PTZ_YZ_BY010W::OnStateEnter(DevState state)
+void PTZ_YZ_BY010W::OnRegisterProperties() 
 {
-
+    // 注册一键拒止相关的云台参数
+    RegisterProp<float>("OneKey_ScanStart", 0.0f, "Scan Start Angle");
+    RegisterProp<float>("OneKey_ScanEnd", 359.9f, "Scan End Angle");
 }
 
 void PTZ_YZ_BY010W::ParseResponse(const u8* data) {
@@ -252,10 +256,6 @@ void PTZ_YZ_BY010W::ParseResponse(const u8* data) {
         // 角度在变 -> 说明电机在转 -> 状态设为 WORKING
         SetState(STATE_WORKING);
     }
-    else {
-        // 角度没变 -> 说明电机停了 -> 状态设为 ONLINE (空闲就绪)
-        SetState(STATE_ONLINE);
-    }
 
     // 只有当角度变化超过 0.1 度时，才发 OwPtzPosition 包
     if (diff > 0.1f) {
@@ -264,6 +264,7 @@ void PTZ_YZ_BY010W::ParseResponse(const u8* data) {
 
         PtzPosition pos = { newPan, newTilt, 0 };
         auto pkt = std::make_shared<rpc::OwPtzPosition>(pos);
+        //LOG_DEBUG("pan: %.2f, tilt: %.2f", pos.pan, pos.tilt);
         if (m_statusCb) m_statusCb(pkt);
     }
 }

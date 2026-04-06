@@ -25,6 +25,7 @@ public:
 
 protected:
     virtual int ReadRaw(u8* buf, u32 maxLen) override;
+    virtual void OnRegisterProperties() override;
 
 private:
     ECCS_Error SendFixedPacket(u8 cmd);

@@ -67,6 +67,7 @@ ECCS_Error DeviceBase::Stop() {
 
     Thread::quit();
     Thread::join();
+    StopReader();
     SetState(STATE_OFFLINE);
     LOG_INFO("[Slot %d] Device Thread Stopped.", m_slotID);
     return ECCS_SUCCESS;
@@ -305,17 +306,35 @@ void DeviceBase::ReadLoop() {
             continue;
         }
 
-        // 调用子类实现的 ReadRaw (阻塞或带超时的读取)
-        int len = ReadRaw(buf.data(), buf.size());
+        try {
+            // 调用子类实现的 ReadRaw (阻塞或带超时的读取)
+            int len = ReadRaw(buf.data(), buf.size());
 
-        if (len > 0) {
-            // 收到数据，交给子类解析
-            OnRawDataReceived(buf.data(), len);
+            if (len > 0) {
+                // 收到数据，交给子类解析
+                OnRawDataReceived(buf.data(), len);
+            }
+            else {
+                // 读取超时或错误，稍微休眠
+                // 注意：如果是严重错误（如断开），子类的 ReadRaw 内部应该处理连接状态
+                msleep(10);
+            }
         }
-        else {
-            // 读取超时或错误，稍微休眠
-            // 注意：如果是严重错误（如断开），子类的 ReadRaw 内部应该处理连接状态
-            msleep(10);
+        catch (const std::exception& e) {
+            // 如果是因为正在关闭程序导致的异常，静默退出循环
+            if (m_shuttingDown) {
+                LOG_INFO("[Slot %d] ReadLoop exiting gracefully during shutdown.", m_slotID);
+                break;
+            }
+
+            // 如果是运行中的意外错误，记录日志并处理状态
+            LOG_ERROR("[Slot %d] ReadLoop exception: %s", m_slotID, e.what());
+            SetState(STATE_OFFLINE);
+            break; // 退出当前读取，等待自愈线程 Reconnect
+        }
+        catch (...) {
+            LOG_ERROR("[Slot %d] ReadLoop unknown exception.", m_slotID);
+            break;
         }
     }
 }

@@ -80,9 +80,9 @@ ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val, TRes
     // 创建局部信号量用于同步等待
     Semaphore syncSem(0);
     TResult result;
-    std::atomic<ECCS_Error> ret{ ECCS_ERR_TIMEOUT };
+    std::atomic<ECCS_Error> ret{ ECCS_SUCCESS };
     
-    auto oldCb = dev->GetStatusCallback();
+    //auto oldCb = dev->GetStatusCallback();
 
     // 注册临时回调监听 Rp 包
     auto tempCb = [&](std::shared_ptr<rpc::RpcPacket> pkt) {
@@ -96,7 +96,7 @@ ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val, TRes
         }
 
         // 如果有旧回调，也顺便触发它，保证全局监听不中断
-        if (oldCb) oldCb(pkt);
+        //if (oldCb) oldCb(pkt);
     };
 
     // 挂载回调并执行发送
@@ -106,15 +106,23 @@ ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val, TRes
     dev->ExecutePacket(pkt);
 
     // 阻塞等待
-    if (syncSem.wait_for(ECCS_C11 chrono::milliseconds(3000))) {
+    if (syncSem.wait_for(ECCS_C11 chrono::milliseconds(2000))) {
         if (outData)
             *outData = result;
     }
 
     // 还原回调
-    dev->SetStatusCallback(oldCb);
+    //dev->SetStatusCallback(oldCb);
 
     return ret.load();
+}
+
+static ECCS_Error PostPktAsync(ECCS_HANDLE hDev, did::DeviceType type, std::shared_ptr<rpc::RpcPacket> pkt) {
+    CHECK_INIT_AND_GET_MGR();
+    DeviceBase* dev = mgr->GetBestDevice(type);
+    if (!dev) return ECCS_ERR_DEV_NOT_FOUND;
+    dev->ExecutePacket(pkt);
+    return ECCS_SUCCESS;
 }
 
 // --- 接口实现 ---
@@ -218,11 +226,11 @@ extern "C" {
         // 开始宏执行序列
         LOG_INFO("--- OneKey Deterrence Start Sequence ---");
 
-        ECCS_Error err = sound->CheckAudioIndex(p.soundTrackIndex);
-        if (err != ECCS_SUCCESS) {
-            LOG_ERROR("OneKey Start aborted: Audio index %d not found.", p.soundTrackIndex);
-            return err; 
-        }
+        //ECCS_Error err = sound->CheckAudioIndex(p.soundTrackIndex);
+        //if (err != ECCS_SUCCESS) {
+        //    LOG_ERROR("OneKey Start aborted: Audio index %d not found.", p.soundTrackIndex);
+        //    return err; 
+        //}
 
         // 强声预设 (设置音量，但不播放)
         ECCS_Sound_SetPlayVolume(hDev, p.soundVolume);
@@ -330,6 +338,8 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Light_SetSwitch(ECCS_HANDLE hDev, int isOpen)
     {
         Result result;
+        //auto pkt = std::make_shared<rpc::RqLightSwitch>(isOpen);
+        //return PostPktAsync(hDev, did::DEVICE_PTZ, pkt);
         return PostPkt<rpc::RqLightSwitch, rpc::RpLightSwitch>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0), &result);
     }
 
@@ -355,6 +365,8 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_Light_SetStrobe(ECCS_HANDLE hDev, int isOpen)
     {
         Result result;
+        /*auto pkt = std::make_shared<rpc::RqLightStrobe>(isOpen);
+        return PostPktAsync(hDev, did::DEVICE_PTZ, pkt);*/
         return PostPkt<rpc::RqLightStrobe, rpc::RpLightStrobe>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0), &result);
     }
 
@@ -362,40 +374,46 @@ extern "C" {
     ECCS_API ECCS_Error ECCS_PTZ_Move(ECCS_HANDLE hDev, int action, int speed) 
     {
         Result result;
-        PtzMotion data = { (u8)action, (u8)speed };
-        return PostPkt<rpc::RqPtzMove, rpc::RpPtzMove>(hDev, did::DEVICE_PTZ, data, &result);
+        auto pkt = std::make_shared<rpc::RqPtzMove>(PtzMotion{ (u8)action, (u8)speed });
+        return PostPktAsync(hDev, did::DEVICE_PTZ, pkt);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_SetAbsolutePos(ECCS_HANDLE hDev, float pan, float tilt) 
     {
         Result result;
-        PtzPosition data = { pan, tilt, 0 };
-        return PostPkt<rpc::RqPtzAbsolutePos, rpc::RpPtzAbsolutePos>(hDev, did::DEVICE_PTZ, data, &result);
+        auto pkt = std::make_shared<rpc::RqPtzAbsolutePos>(PtzPosition{ pan, tilt, 0 });
+        return PostPktAsync(hDev, did::DEVICE_PTZ, pkt); 
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_SetScanRange(ECCS_HANDLE hDev, float start, float end) 
     {
         Result result;
-        PtzScanRange data = { start, end };
-        return PostPkt<rpc::RqSetPtzScanRange, rpc::RpSetPtzScanRange>(hDev, did::DEVICE_PTZ, data, &result);
+        auto pkt = std::make_shared<rpc::RqSetPtzScanRange>(PtzScanRange{ start, end });
+        return PostPktAsync(hDev, did::DEVICE_PTZ, pkt);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_StartScan(ECCS_HANDLE hDev) 
     {
         Result result;
-        return PostPkt<rpc::RqPtzStartScan, rpc::RpPtzStartScan>(hDev, did::DEVICE_PTZ, rpc::NoneData(), &result);
+        auto pkt = std::make_shared<rpc::RqPtzStartScan>();
+        return PostPktAsync(hDev, did::DEVICE_PTZ, pkt); 
+        //return PostPkt<rpc::RqPtzStartScan, rpc::RpPtzStartScan>(hDev, did::DEVICE_PTZ, rpc::NoneData(), &result);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_StopScan(ECCS_HANDLE hDev) 
     {
         Result result;
-        return PostPkt<rpc::RqPtzStopScan, rpc::RpPtzStopScan>(hDev, did::DEVICE_PTZ, rpc::NoneData(), &result);
+        auto pkt = std::make_shared<rpc::RqPtzStopScan>();
+        return PostPktAsync(hDev, did::DEVICE_PTZ, pkt); 
+        //return PostPkt<rpc::RqPtzStopScan, rpc::RpPtzStopScan>(hDev, did::DEVICE_PTZ, rpc::NoneData(), &result);
     }
 
     ECCS_API ECCS_Error ECCS_PTZ_Reset(ECCS_HANDLE hDev) 
     {
         Result result;
-        return PostPkt<rpc::RqPtzReset, rpc::RpPtzReset>(hDev, did::DEVICE_PTZ, rpc::NoneData(), &result);
+        auto pkt = std::make_shared<rpc::RqPtzReset>();
+        return PostPktAsync(hDev, did::DEVICE_PTZ, pkt); 
+        //return PostPkt<rpc::RqPtzReset, rpc::RpPtzReset>(hDev, did::DEVICE_PTZ, rpc::NoneData(), &result);
     }
 
     // --- Sound ---
@@ -507,7 +525,7 @@ extern "C" {
         fileData.assign((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 
         // 调用驱动层上传接口
-        return soundDev->UploadAudioFile(getDir(localPath), fileData.data(), (u32)fileData.size());
+        return soundDev->UploadAudioFile(localPath, fileData.data(), (u32)fileData.size());
     }
 
     ECCS_API ECCS_Error ECCS_Sound_RegisterAudioCallback(ECCS_HANDLE hDev, ECCSAudioRxCallback cb, void* userCtx) 

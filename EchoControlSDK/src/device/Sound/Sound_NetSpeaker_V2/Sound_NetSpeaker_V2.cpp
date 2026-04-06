@@ -1,6 +1,7 @@
 ﻿#include "Sound_NetSpeaker_V2.h"
 #include "debug/Logger.h"
 #include "time/time_utils.h"
+#include "debug/Exceptions.h"
 #include <chrono>
 
 ECCS_BEGIN
@@ -24,10 +25,18 @@ ECCS_Error Sound_NetSpeaker_V2::Init(int slotID, const std::map<str, str>& confi
     if (DeviceBase::Init(slotID, config) != ECCS_SUCCESS)
         return ECCS_ERR_NOT_INIT;
 
+    RegisterProp<int>("Audio_Port", 9888, "Remote UDP Audio Port");
+    RegisterProp<int>("Local_Audio_Port", 11200, "Local UDP Audio Port");
+    // 注册一键拒止相关的强声参数
+    RegisterProp<int>("OneKey_Vol", 30, "Default Deterrence Volume");
+    RegisterProp<int>("OneKey_Idx", 1, "Default Deterrence Track Index");
+    RegisterProp<int>("OneKey_Loop", 1, "Default Deterrence Loop Toggle");
+
     m_ip = GetPropValue<str>("IP");
     m_port = GetPropValue<int>("Port");
     m_txTargetPort = GetPropValue<int>("Audio_Port");
     m_rxLocalPort = GetPropValue<int>("Local_Audio_Port");
+    
     if (m_port == 0) m_port = 9527;
 
     return ECCS_SUCCESS;
@@ -153,8 +162,8 @@ ECCS_Error Sound_NetSpeaker_V2::PlayIndex(int index, bool loop)
 
 ECCS_Error Sound_NetSpeaker_V2::StopPlay()
 {
-    SendJsonCmd("stop_play", nullptr);
-    msleep(200);
+    //SendJsonCmd("stop_play", nullptr);
+    //msleep(200);
     //SetState(STATE_ONLINE);
     if (!SetSoundMode(SoundStatus::Idle))
         return ECCS_ERR_DEV_BUSY;
@@ -199,15 +208,16 @@ ECCS_Error Sound_NetSpeaker_V2::SetTalk(bool isOpen)
         return ECCS_ERR_DEV_OFFLINE;
 
     if (isOpen) {
+        if (!SetSoundMode(SoundStatus::MicBroadcast))
+            return ECCS_ERR_DEV_BUSY;
+
         str localIP = m_ctrlSocket->getLocalAddress();
         if (localIP.empty()) localIP = "0.0.0.0"; // 防御性处理
 
         // 更新音频参数快照 (PCM 16K, 9888端口)
-        {
-            std::lock_guard<std::mutex> lock(m_specMutex);
-            m_txTargetPort = GetPropValue<int>("Audio_Port"); // 从配置读取 9888
-            m_currentSpec = { 640, 5 }; // PCM 16K 推荐帧大小
-        }
+        std::lock_guard<std::mutex> lock(m_specMutex);
+        m_txTargetPort = GetPropValue<int>("Audio_Port"); // 从配置读取 9888
+        m_currentSpec = { 640, 5 }; // PCM 16K 推荐帧大小
 
         // 构造指令参数
         char params[256];
@@ -234,6 +244,8 @@ ECCS_Error Sound_NetSpeaker_V2::SetTalk(bool isOpen)
         m_keepAudioTx = false;
         m_keepAudioRx = false;
         m_soundMode = SoundStatus::Idle;
+        if (!SetSoundMode(SoundStatus::Idle))
+            return ECCS_ERR_DEV_BUSY;
         SetState(STATE_ONLINE);
         return ECCS_SUCCESS;
     }
@@ -284,12 +296,14 @@ ECCS_Error Sound_NetSpeaker_V2::SetCaptureVolume(u8 vol)
 
 ECCS_Error Sound_NetSpeaker_V2::GetAudioList(SoundAudioList& list)
 {
-    SendJsonCmd("get_play_list", nullptr, 2000);
+    //SendJsonCmd("get_play_list", nullptr, 2000);
+    QueryAudioList();
     return ECCS_SUCCESS;
 }
 
 ECCS_Error Sound_NetSpeaker_V2::UploadAudioFile(const str& name, const u8* data, u32 len)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_cmdMtx);
     if (!data || len == 0)
         return ECCS_ERR_INVALID_PARAM;
 
@@ -300,16 +314,19 @@ ECCS_Error Sound_NetSpeaker_V2::UploadAudioFile(const str& name, const u8* data,
     int seq = ++m_cseq;
 
     snprintf(header, sizeof(header),
-        "{\"command\":\"add_alarm_file\",\"cseq\":\"%d\",\"mp3_len\":\"%u\"}\r\n\r\n",
+        "{\"command\":\"mp3_stream_play\",\"cseq\":\"%d\",\"mp3_len\":\"%u\"}\r\n\r\n",
         seq, len);
 
     try
     {
-        // 1. 先发 JSON 头
+        // 先发 JSON 头
         m_ctrlSocket->write((const u8*)header, strlen(header));
 
-        // 2. 再发二进制数据
+        // 再发二进制数据
         m_ctrlSocket->write(data, len);
+
+        msleep(500);
+        //SetSoundMode(OneKey);
     }
     catch (...)
     {
@@ -541,30 +558,27 @@ void Sound_NetSpeaker_V2::CtrlRxLoop()
             continue;
         }
 
-        int len = 0;
         try {
-            len = m_ctrlSocket->read(buf, sizeof(buf));
+            int len = m_ctrlSocket->read(buf, sizeof(buf));
+            if (len > 0) {
+                m_ctrlRxCache.append((char*)buf, len);
+                size_t pos;
+                while ((pos = m_ctrlRxCache.find("\r\n\r\n")) != std::string::npos) {
+                    std::string one = m_ctrlRxCache.substr(0, pos);
+                    m_ctrlRxCache.erase(0, pos + 4);
+                    HandleJsonReply(one);
+                }
+            }
         }
-        catch (...) {
-            SetState(STATE_ERROR);
-            break;
-        }
-
-        if (len <= 0)
-        {
-            msleep(10);
+        catch (const ETimeout&) {
             continue;
         }
-
-        m_ctrlRxCache.append((char*)buf, len);
-
-        // JSON 以 \r\n\r\n 结尾
-        size_t pos;
-        while ((pos = m_ctrlRxCache.find("\r\n\r\n")) != std::string::npos)
-        {
-            std::string one = m_ctrlRxCache.substr(0, pos);
-            m_ctrlRxCache.erase(0, pos + 4);
-            HandleJsonReply(one);
+        catch (const std::exception& e) {
+            if (!m_shuttingDown) {
+                LOG_ERROR("[Slot %d] Sound CtrlRxLoop fatal error: %s", m_slotID, e.what());
+                SetState(STATE_ERROR);
+            }
+            break;
         }
     }
 }
@@ -758,24 +772,23 @@ void Sound_NetSpeaker_V2::HeartbeatLoop()
     {
         msleep(1000);
 
-        if (IsOnline())
-            continue;
+        if (IsOnline()) {
+            heartbeatCounter++;
+            queryCounter++;
 
-        heartbeatCounter++;
-        queryCounter++;
+            if (heartbeatCounter >= 28)
+            {
+                LOG_DEBUG("[NetSpeaker] Sending mandatory heartbeat (online)...");
+                SendJsonCmd("online", nullptr);
+                heartbeatCounter = 0; // 重置心跳计数
+            }
 
-        if (heartbeatCounter >= 30)
-        {
-            LOG_DEBUG("[NetSpeaker] Sending mandatory heartbeat (online)...");
-            SendJsonCmd("online", nullptr);
-            heartbeatCounter = 0; // 重置心跳计数
-        }
-
-        if (GetState() == STATE_WORKING && queryCounter >= 5)
-        {
-            LOG_DEBUG("[NetSpeaker] Device is WORKING, polling status...");
-            SendJsonCmd("get_status", nullptr);
-            queryCounter = 0; // 重置巡检计数
+            if (GetState() == STATE_WORKING && queryCounter >= 5)
+            {
+                LOG_DEBUG("[NetSpeaker] Device is WORKING, polling status...");
+                SendJsonCmd("get_status", nullptr);
+                queryCounter = 0; // 重置巡检计数
+            }
         }
 
     }
