@@ -234,6 +234,9 @@ void PTZ_YZ_BY010W::ParseResponse(const u8* data) {
     u8 type = data[3];
     u16 val = (data[4] << 8) | data[5];
     float angle = val / 100.0f;
+
+    LOG_DEBUG("[PTZ Data] Raw packet received, Type: 0x%02X, Angle: %.2f", type, angle);
+
     float newPan = m_lastPan.load();
     float newTilt = m_lastTilt.load();
 
@@ -264,7 +267,7 @@ void PTZ_YZ_BY010W::ParseResponse(const u8* data) {
 
         PtzPosition pos = { newPan, newTilt, 0 };
         auto pkt = std::make_shared<rpc::OwPtzPosition>(pos);
-        //LOG_DEBUG("pan: %.2f, tilt: %.2f", pos.pan, pos.tilt);
+        LOG_DEBUG("pan: %.2f, tilt: %.2f", pos.pan, pos.tilt);
         if (m_statusCb) m_statusCb(pkt);
     }
 }

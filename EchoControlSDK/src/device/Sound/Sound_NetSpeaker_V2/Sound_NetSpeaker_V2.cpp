@@ -509,6 +509,8 @@ str Sound_NetSpeaker_V2::BuildJson(const char* cmd, const char* params, int seq)
 
 bool Sound_NetSpeaker_V2::SendJsonCmd(const char* cmd, const char* params, int timeout_ms)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_cmdMtx);
+
     if (!Connect())
         return false;
     try
