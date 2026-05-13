@@ -267,8 +267,8 @@ extern "C" {
 
     /**
      * @brief 控制云台旋转到指定角度
-     * @param start，线扫起始角度: 0°-359.99°
-     * @param end，  线扫终止角度: 0°-359.99°
+     * @param pan，  水平角度: -45°- +45°
+     * @param tilt， 俯仰角度: 0°- 359.99°
      */
     ECCS_API ECCS_Error ECCS_PTZ_SetAbsolutePos(ECCS_HANDLE hDev, float pan, float tilt);
 

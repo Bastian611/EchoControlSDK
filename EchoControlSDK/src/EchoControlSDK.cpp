@@ -106,7 +106,7 @@ ECCS_Error PostPkt(ECCS_HANDLE hDev, did::DeviceType type, const TVal& val, TRes
     dev->ExecutePacket(pkt);
 
     // 阻塞等待
-    if (syncSem.wait_for(ECCS_C11 chrono::milliseconds(2000))) {
+    if (syncSem.wait_for(ECCS_C11 chrono::milliseconds(1000))) {
         if (outData)
             *outData = result;
     }
@@ -232,25 +232,23 @@ extern "C" {
         //    return err; 
         //}
 
+        // 云台预设
+        ECCS_PTZ_Move(hDev, 1, 63);
+        msleep(1000);
+        ECCS_PTZ_SetScanRange(hDev, p.ptzScanStart, p.ptzScanEnd);
+        ECCS_PTZ_Move(hDev, 5, 32);
+
         // 强声预设 (设置音量，但不播放)
         ECCS_Sound_SetPlayVolume(hDev, p.soundVolume);
-        msleep(50);
 
         // 云台线扫开启
-        ECCS_PTZ_SetScanRange(hDev, p.ptzScanStart, p.ptzScanEnd);
-        msleep(50);
         ECCS_PTZ_StartScan(hDev);
-        msleep(50);
 
         // 强光开启
-        ECCS_Light_SetLevel(hDev, p.lightLevel);
-        msleep(50);
-        ECCS_Light_SetMode(hDev, p.lightMode);
-        msleep(50);
+        //ECCS_Light_SetLevel(hDev, p.lightLevel);
+        //ECCS_Light_SetMode(hDev, p.lightMode);
         ECCS_Light_SetSwitch(hDev, true);
-        msleep(50);
         ECCS_Light_SetStrobe(hDev, p.lightStrobe == 1);
-        msleep(50);
 
         // 强声播放 (最后开启声音，此时光和电已经就位)
         ECCS_Sound_Play(hDev, p.soundTrackIndex, p.soundLoop == 1);
@@ -267,6 +265,8 @@ extern "C" {
         ECCS_Light_SetStrobe(hDev, 0);
         ECCS_Light_SetSwitch(hDev, 0);
         ECCS_PTZ_StopScan(hDev);
+        msleep(100);
+        ECCS_PTZ_Reset(hDev);
 
         LOG_INFO(">>> One-Key Deterrence STOPPED <<<");
         return ECCS_SUCCESS;
@@ -340,7 +340,8 @@ extern "C" {
         Result result;
         //auto pkt = std::make_shared<rpc::RqLightSwitch>(isOpen);
         //return PostPktAsync(hDev, did::DEVICE_PTZ, pkt);
-        return PostPkt<rpc::RqLightSwitch, rpc::RpLightSwitch>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0), &result);
+        ECCS_Error ret = PostPkt<rpc::RqLightSwitch, rpc::RpLightSwitch>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0), &result);
+        return ret;
     }
 
     ECCS_API ECCS_Error ECCS_Light_SetMode(ECCS_HANDLE hDev, int mode) 
@@ -367,7 +368,8 @@ extern "C" {
         Result result;
         /*auto pkt = std::make_shared<rpc::RqLightStrobe>(isOpen);
         return PostPktAsync(hDev, did::DEVICE_PTZ, pkt);*/
-        return PostPkt<rpc::RqLightStrobe, rpc::RpLightStrobe>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0), &result);
+        ECCS_Error ret = PostPkt<rpc::RqLightStrobe, rpc::RpLightStrobe>(hDev, did::DEVICE_LIGHT, (bool)(isOpen != 0), &result);
+        return ret;
     }
 
     // --- PTZ ---

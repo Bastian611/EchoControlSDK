@@ -1,5 +1,6 @@
 #include "PTZ_YZ_BY010W.h"
 #include "debug/Exceptions.h"
+#include <iomanip>
 
 ECCS_BEGIN
 
@@ -170,6 +171,14 @@ ECCS_Error PTZ_YZ_BY010W::SendPelcoD(u8 cmd1, u8 cmd2, u8 data1, u8 data2)
     buf[6] = (u8)(sum & 0xFF);
     try {
         m_socket->write(buf, 7);
+        std::stringstream ss;
+        ss << std::hex << std::uppercase << std::setfill('0');
+        for (int i = 0; i < 7; i++) {
+            if (i > 0) ss << " ";
+            ss << "0x" << std::setw(2) << static_cast<int>(buf[i]);
+        }
+        std::string hexString = ss.str();
+        LOG_DEBUG("PTZ write: [%s]", hexString.c_str());
         return ECCS_SUCCESS;
     }
     catch (...) {
@@ -200,7 +209,16 @@ int PTZ_YZ_BY010W::ReadRaw(u8* buf, u32 maxLen)
 {
     if (!m_socket || !m_socket->isOpen()) return -1;
     try {
-        return m_socket->read(buf, maxLen);
+        int r = m_socket->read(buf, maxLen);
+        std::stringstream ss;
+        ss << std::hex << std::uppercase << std::setfill('0');
+        for (int i = 0; i < 7; i++) {
+            if (i > 0) ss << " ";
+            ss << "0x" << std::setw(2) << static_cast<int>(buf[i]);
+        }
+        std::string hexString = ss.str();
+        //LOG_DEBUG("PTZ read raw: [%s]", hexString.c_str());
+        return r;
     }
     catch (...) {
         return -1;
@@ -235,7 +253,7 @@ void PTZ_YZ_BY010W::ParseResponse(const u8* data) {
     u16 val = (data[4] << 8) | data[5];
     float angle = val / 100.0f;
 
-    LOG_DEBUG("[PTZ Data] Raw packet received, Type: 0x%02X, Angle: %.2f", type, angle);
+    //LOG_DEBUG("[PTZ Data] Raw packet received, Type: 0x%02X, Angle: %.2f", type, angle);
 
     float newPan = m_lastPan.load();
     float newTilt = m_lastTilt.load();
@@ -255,20 +273,18 @@ void PTZ_YZ_BY010W::ParseResponse(const u8* data) {
     }
 
     float diff = std::abs(newPan - m_lastPan.load()) + std::abs(newTilt - m_lastTilt.load());
-    if (diff > 0.05f) {
-        // 角度在变 -> 说明电机在转 -> 状态设为 WORKING
-        SetState(STATE_WORKING);
-    }
-
-    // 只有当角度变化超过 0.1 度时，才发 OwPtzPosition 包
-    if (diff > 0.1f) {
+    if (diff > 0.02f) {
         m_lastPan = newPan;
         m_lastTilt = newTilt;
 
         PtzPosition pos = { newPan, newTilt, 0 };
         auto pkt = std::make_shared<rpc::OwPtzPosition>(pos);
-        LOG_DEBUG("pan: %.2f, tilt: %.2f", pos.pan, pos.tilt);
+        
         if (m_statusCb) m_statusCb(pkt);
+        //LOG_DEBUG("pan: %.2f, tilt: %.2f", pos.pan, pos.tilt);
+
+        // 角度在变 -> 说明电机在转 -> 状态设为 WORKING
+        SetState(STATE_WORKING);
     }
 }
 
